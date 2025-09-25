@@ -24,6 +24,8 @@ data-marketplace/
 │   ├── app.py          # Main application
 │   ├── models.py       # SQLAlchemy database models
 │   ├── database.py     # Database service layer
+│   ├── utils/          # Utility scripts
+│   │   └── seed_database.py # Database seeding utility
 │   └── dataProducts.json # Fallback JSON storage
 ├── deploy.sh           # Bash deployment script (Linux/Mac)
 ├── deploy.ps1          # PowerShell deployment script (Windows)
@@ -157,6 +159,20 @@ PGSSLMODE=require
 - All database operations are handled through the `database.py` service layer
 - Frontend uses React Context for state management
 - API endpoints maintain backward compatibility
+
+### Utility Scripts
+
+The `backend/utils/` directory contains helpful utility scripts:
+
+- **`seed_database.py`**: Migrates data from `dataProducts.json` to the Lakebase database
+  ```bash
+  # Using environment variable
+  export PGPASSWORD="your_token_here"
+  python backend/utils/seed_database.py
+  
+  # Using command line argument
+  python backend/utils/seed_database.py "your_token_here"
+  ```
 
 ## 🤝 Contributing
 

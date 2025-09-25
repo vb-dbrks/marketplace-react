@@ -15,6 +15,8 @@ backend/test_*.py
 backend/migrate_*.py
 backend/set_*.sh
 backend/README_*.md
+backend/utils/*.tmp
+backend/utils/*.temp
 frontend/dist/
 *.log
 
