@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Accept parameters
-APP_FOLDER_IN_WORKSPACE=${1:-"/Workspace/Users/varun.bhandary@databricks.com/internalmarketplace-react"}
-LAKEHOUSE_APP_NAME=${2:-"internalmarketplace-react"}
+APP_FOLDER_IN_WORKSPACE=${1:-"/Workspace/Users/your-email@databricks.com/data-marketplace"}
+LAKEHOUSE_APP_NAME=${2:-"data-marketplace"}
 DATABRICKS_PROFILE=${3:-"DEFAULT"}
 
 # Display configuration

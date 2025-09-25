@@ -2,8 +2,8 @@
 # Usage: .\deploy.ps1 [workspace-path] [app-name] [profile]
 
 param(
-    [string]$AppFolderInWorkspace = "/Workspace/Users/varun.bhandary@databricks.com/internalmarketplace-react",
-    [string]$LakehouseAppName = "internalmarketplace-react",
+    [string]$AppFolderInWorkspace = "/Workspace/Users/your-email@databricks.com/data-marketplace",
+    [string]$LakehouseAppName = "data-marketplace",
     [string]$DatabricksProfile = "DEFAULT"
 )
 

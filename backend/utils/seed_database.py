@@ -21,9 +21,10 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Use environment variables if they're already set, otherwise set defaults
+# NOTE: Replace these with your actual Lakebase connection details
 if not os.environ.get('PGHOST'):
-    os.environ['PGHOST'] = 'instance-585a6376-b1ab-45e1-b42f-e63538845c14.database.azuredatabricks.net'
-    os.environ['PGUSER'] = 'varun.bhandary@databricks.com'
+    os.environ['PGHOST'] = 'your-lakebase-host.database.azuredatabricks.net'
+    os.environ['PGUSER'] = 'your-email@databricks.com'
     os.environ['PGDATABASE'] = 'databricks_postgres'
     os.environ['PGPORT'] = '5432'
     os.environ['PGSSLMODE'] = 'require'
@@ -46,14 +47,17 @@ def main():
         print("✅ Database service imported successfully")
         
         # Read data from JSON file
-        json_file_path = Path(__file__).parent.parent / 'dataProducts.json'
+        json_file_path = Path(__file__).parent / 'dataProducts.json'
         
-        if not json_file_path.exists():
-            print(f"❌ JSON file not found at: {json_file_path}")
+        # Convert to string for compatibility
+        json_file_str = str(json_file_path)
+        
+        if not os.path.exists(json_file_str):
+            print(f"❌ JSON file not found at: {json_file_str}")
             print("   Please ensure dataProducts.json exists in the backend directory")
             sys.exit(1)
         
-        with open(json_file_path, 'r') as f:
+        with open(json_file_str, 'r') as f:
             products_data = json.load(f)
         
         print(f"📦 Found {len(products_data)} products in JSON file")

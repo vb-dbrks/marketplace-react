@@ -1,45 +1,43 @@
-# Backend Utilities
+# Utility Scripts
 
 This directory contains utility scripts for the Data Marketplace application.
 
-## Available Scripts
+## Database Seeding
 
 ### `seed_database.py`
-
 Seeds the Lakebase database with data from `dataProducts.json`.
 
 **Usage:**
 ```bash
-# Using environment variable
-export PGPASSWORD="your_token_here"
-python seed_database.py
+# Using environment variables
+export PGPASSWORD="your-token-here"
+python utils/seed_database.py
 
 # Using command line argument
-python seed_database.py "your_token_here"
+python utils/seed_database.py "your-token-here"
 ```
 
-**What it does:**
-- Reads all products from `dataProducts.json`
-- Connects to the Lakebase PostgreSQL database
-- Writes all products to the database
-- Verifies the data was written correctly
-- Provides feedback on the seeding process
+**Prerequisites:**
+1. Set up your Lakebase connection details in the script or environment variables
+2. Ensure `dataProducts.json` exists in the backend directory
+3. Have a valid Databricks token
 
-**Requirements:**
-- Valid Databricks token (either as environment variable or command line argument)
-- `dataProducts.json` file in the backend directory
-- Database environment variables set (PGHOST, PGUSER, PGDATABASE, etc.)
+### `seed_simple.py`
+A simplified version of the seeding script with better Windows compatibility.
 
-**Example Output:**
-```
-✅ Using token from environment variable
-✅ Database service imported successfully
-📦 Found 13 products in JSON file
-🌱 Seeding database...
-✅ Database seeded successfully!
-📊 Database now contains 13 products
-📋 First product: Global Budget Planning & Investment - (MVP)
+## Setup Scripts
 
-🎉 Database seeding complete!
-💡 You can now remove the JSON file if desired
-```
+### `setup_database.sh` (Linux/Mac)
+Automated setup script for Unix-like systems.
+
+### `setup_database.cmd` (Windows)
+Automated setup script for Windows Command Prompt.
+
+## Configuration
+
+Before running any scripts, update the database connection details in:
+- `seed_database.py` (lines 25-30)
+- `setup_database.sh` (lines 34-39)
+- `setup_database.cmd` (lines 35-40)
+
+Replace the placeholder values with your actual Lakebase connection details.
