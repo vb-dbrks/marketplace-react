@@ -9,7 +9,14 @@ class DatabaseService:
     def __init__(self):
         self.use_database = os.environ.get("PGHOST") is not None
         if self.use_database:
-            create_tables()
+            try:
+                create_tables()
+            except Exception as e:
+                error_msg = str(e)
+                if "Invalid authorization" in error_msg or "databricks token" in error_msg or "Failed to decode token" in error_msg:
+                    raise Exception(f"❌ Database connection failed: Invalid or expired Databricks token. Please refresh your token and try again. Original error: {error_msg}")
+                else:
+                    raise Exception(f"❌ Database connection failed: {error_msg}")
     
     def get_products(self) -> List[Dict[str, Any]]:
         """Get all data products"""

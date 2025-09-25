@@ -6,7 +6,15 @@ from pydantic import BaseModel, ValidationError
 import os, json, logging, signal, sys
 from typing import List, Dict, Any
 import uvicorn
-from database import db_service
+try:
+    from database import db_service
+except Exception as e:
+    print(f"❌ Failed to initialize database service: {e}")
+    print("💡 To fix this issue:")
+    print("   1. Get a fresh Databricks token from your Databricks workspace")
+    print("   2. Set the PGPASSWORD environment variable with the new token")
+    print("   3. Restart the application")
+    sys.exit(1)
 
 # Configure logging to stdout/stderr as required by Databricks Apps
 logging.basicConfig(
@@ -141,7 +149,7 @@ def database_status():
     }
 
 # serve React build from /static
-app.mount("/", StaticFiles(directory="static", html=True), name="site")
+app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="site")
 
 # Required for Databricks Apps: bind to 0.0.0.0 and use DATABRICKS_APP_PORT
 if __name__ == "__main__":
