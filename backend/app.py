@@ -11,9 +11,18 @@ try:
 except Exception as e:
     print(f"❌ Failed to initialize database service: {e}")
     print("💡 To fix this issue:")
-    print("   1. Get a fresh Databricks token from your Databricks workspace")
-    print("   2. Set the PGPASSWORD environment variable with the new token")
-    print("   3. Restart the application")
+    if "Missing required environment variables" in str(e):
+        print("   1. Set all required environment variables:")
+        print("      PGHOST, PGUSER, PGDATABASE, PGPORT, PGSSLMODE, PGPASSWORD")
+        print("   2. Or remove all PG* environment variables to use JSON storage")
+    elif "Invalid or expired Databricks token" in str(e):
+        print("   1. Get a fresh Databricks token from your Databricks workspace")
+        print("   2. Set the PGPASSWORD environment variable with the new token")
+        print("   3. Restart the application")
+    else:
+        print("   1. Check your database configuration")
+        print("   2. Verify all environment variables are set correctly")
+        print("   3. Or remove all PG* environment variables to use JSON storage")
     sys.exit(1)
 
 # Configure logging to stdout/stderr as required by Databricks Apps

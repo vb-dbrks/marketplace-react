@@ -1,14 +1,28 @@
 # PowerShell deployment script for Databricks Apps
-# Usage: .\deploy.ps1 [workspace-path] [app-name]
+# Usage: .\deploy.ps1 [workspace-path] [app-name] [profile]
 
 param(
     [string]$AppFolderInWorkspace = "/Workspace/Users/varun.bhandary@databricks.com/internalmarketplace-react",
-    [string]$LakehouseAppName = "internalmarketplace-react"
+    [string]$LakehouseAppName = "internalmarketplace-react",
+    [string]$DatabricksProfile = "DEFAULT"
 )
 
 Write-Host "🚀 Starting Databricks Apps deployment..." -ForegroundColor Green
 Write-Host "📁 Workspace Path: $AppFolderInWorkspace" -ForegroundColor Cyan
 Write-Host "📱 App Name: $LakehouseAppName" -ForegroundColor Cyan
+Write-Host "🔧 Databricks Profile: $DatabricksProfile" -ForegroundColor Cyan
+Write-Host ""
+
+# Function to run databricks commands with profile
+function Invoke-DatabricksCommand {
+    param([string[]]$Arguments)
+    
+    if ($DatabricksProfile -eq "DEFAULT") {
+        & databricks @Arguments
+    } else {
+        & databricks --profile $DatabricksProfile @Arguments
+    }
+}
 
 # Frontend build and import
 Write-Host "`n📦 Building frontend..." -ForegroundColor Yellow
@@ -21,7 +35,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "📤 Uploading frontend to Databricks..." -ForegroundColor Yellow
-databricks workspace import-dir dist "$AppFolderInWorkspace/static" --overwrite
+Invoke-DatabricksCommand @("workspace", "import-dir", "dist", "$AppFolderInWorkspace/static", "--overwrite")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Frontend upload failed!" -ForegroundColor Red
     exit 1
@@ -54,7 +68,7 @@ if (Test-Path "app_prod.py") {
 }
 
 Write-Host "📤 Uploading backend to Databricks..." -ForegroundColor Yellow
-databricks workspace import-dir build "$AppFolderInWorkspace" --overwrite
+Invoke-DatabricksCommand @("workspace", "import-dir", "build", "$AppFolderInWorkspace", "--overwrite")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Backend upload failed!" -ForegroundColor Red
     exit 1
@@ -66,7 +80,7 @@ Set-Location ..
 
 # Deploy the application
 Write-Host "`n🚀 Deploying application..." -ForegroundColor Yellow
-databricks apps deploy "$LakehouseAppName" --source-code-path "$AppFolderInWorkspace"
+Invoke-DatabricksCommand @("apps", "deploy", "$LakehouseAppName", "--source-code-path", "$AppFolderInWorkspace")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ App deployment failed!" -ForegroundColor Red
     exit 1

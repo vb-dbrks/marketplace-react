@@ -60,27 +60,102 @@ cd data-marketplace
 ```bash
 cd backend
 pip install -r requirements.txt
-python app.py
 ```
 
-3. **Frontend Setup** (in a new terminal):
+3. **Database Configuration** (Choose one option):
+
+   **Option A: Use JSON Storage (Default)**
+   ```bash
+   # No additional setup needed - app will use dataProducts.json
+   python app.py
+   ```
+
+   **Option B: Connect to Lakebase Database**
+   
+   **Bash/Linux/Mac:**
+   ```bash
+   # Set up environment variables for database connection
+   export PGHOST="your-lakebase-host"
+   export PGUSER="your-email@databricks.com"
+   export PGDATABASE="databricks_postgres"
+   export PGPORT="5432"
+   export PGSSLMODE="require"
+   export PGPASSWORD="your-databricks-token"
+   
+   # Start the backend
+   python app.py
+   ```
+   
+   **PowerShell/Windows:**
+   ```powershell
+   # Set up environment variables for database connection
+   $env:PGHOST="your-lakebase-host"
+   $env:PGUSER="your-email@databricks.com"
+   $env:PGDATABASE="databricks_postgres"
+   $env:PGPORT="5432"
+   $env:PGSSLMODE="require"
+   $env:PGPASSWORD="your-databricks-token"
+   
+   # Start the backend
+   python app.py
+   ```
+
+4. **Frontend Setup** (in a new terminal):
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-4. **Access the Application**:
+5. **Access the Application**:
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
+- Database Status: http://localhost:8000/api/database-status
 
 ## 🗄️ Database Configuration
 
 The app automatically detects the environment:
 
-- **Development**: Uses JSON file storage (`dataProducts.json`)
-- **Production**: Uses PostgreSQL via Lakebase
+- **Development**: Uses JSON file storage (`dataProducts.json`) by default
+- **Production**: Uses PostgreSQL via Lakebase when environment variables are set
+
+### Getting Lakebase Credentials for Local Development
+
+To connect to Lakebase from your local machine:
+
+1. **Access your Databricks workspace**
+2. **Navigate to Apps** → **Your App** → **Resources**
+3. **Add a Database resource** (Lakebase)
+4. **Copy the connection details** from the resource configuration
+5. **Get a Databricks token**:
+   - Go to User Settings → Developer → Access Tokens
+   - Generate a new token (valid for 1 hour by default)
+   - Use this token as `PGPASSWORD`
+
+### Environment Variables for Local Development
+
+**Bash/Linux/Mac:**
+```bash
+# Required for Lakebase connection
+export PGHOST="your-lakebase-host.database.azuredatabricks.net"
+export PGUSER="your-email@databricks.com"
+export PGDATABASE="databricks_postgres"
+export PGPORT="5432"
+export PGSSLMODE="require"
+export PGPASSWORD="your-databricks-token"  # Get from Databricks UI
+```
+
+**PowerShell/Windows:**
+```powershell
+# Required for Lakebase connection
+$env:PGHOST="your-lakebase-host.database.azuredatabricks.net"
+$env:PGUSER="your-email@databricks.com"
+$env:PGDATABASE="databricks_postgres"
+$env:PGPORT="5432"
+$env:PGSSLMODE="require"
+$env:PGPASSWORD="your-databricks-token"  # Get from Databricks UI
+```
 
 ### Environment Variables (Production)
 When deployed to Databricks Apps with Lakebase, these are automatically set:
@@ -98,18 +173,27 @@ PGSSLMODE=require
 
 **Linux/Mac:**
 ```bash
-./deploy.sh [workspace-path] [app-name]
+./deploy.sh [workspace-path] [app-name] [profile]
 ```
 
 **Windows:**
 ```powershell
-.\deploy.ps1 -AppFolderInWorkspace "[workspace-path]" -LakehouseAppName "[app-name]"
+.\deploy.ps1 -AppFolderInWorkspace "[workspace-path]" -LakehouseAppName "[app-name]" -DatabricksProfile "[profile]"
 ```
 
-**Example:**
+**Examples:**
 ```bash
-./deploy.sh "/Workspace/Users/username/data-marketplace" "my-data-marketplace"
+# Deploy to default profile
+./deploy.sh "/Workspace/Users/your-email@company.com/data-marketplace" "data-marketplace"
+
+# Deploy to specific profile (dev, test, prod)
+./deploy.sh "/Workspace/Users/your-email@company.com/data-marketplace" "data-marketplace" "prod"
 ```
+
+**Profile Configuration:**
+- Set up multiple Databricks profiles using `databricks configure --profile <name>`
+- Use `DEFAULT` or omit the profile parameter to use the default profile
+- Common profiles: `dev`, `test`, `prod`, `staging`
 
 ### Prerequisites for Production
 1. Add Lakebase database resource in Databricks Apps UI
@@ -159,6 +243,27 @@ PGSSLMODE=require
 - All database operations are handled through the `database.py` service layer
 - Frontend uses React Context for state management
 - API endpoints maintain backward compatibility
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**"No products found" error:**
+- Check if `dataProducts.json` exists in the `backend/` directory
+- If using database: verify environment variables are set correctly
+- Check database status: `curl http://localhost:8000/api/database-status`
+
+**Database connection fails:**
+- Verify your Databricks token is valid (tokens expire after 1 hour)
+- Check that all environment variables are set:
+  - **Bash**: `echo $PGHOST $PGUSER $PGPASSWORD`
+  - **PowerShell**: `echo $env:PGHOST $env:PGUSER $env:PGPASSWORD`
+- Ensure your Databricks workspace has Lakebase configured
+
+**App won't start:**
+- Check if port 8000 is available: `lsof -i :8000`
+- Verify Python dependencies: `pip install -r requirements.txt`
+- Check for syntax errors in the logs
 
 ### Utility Scripts
 

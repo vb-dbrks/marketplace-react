@@ -57,11 +57,17 @@ def get_database_url():
         # Note: PGPASSWORD might not be set in Databricks Apps environment
         # as they use service principal authentication
         password = os.environ.get('PGPASSWORD', '')
+        user = os.environ.get('PGUSER', '')
+        host = os.environ.get('PGHOST', '')
+        port = os.environ.get('PGPORT', '5432')
+        database = os.environ.get('PGDATABASE', '')
+        sslmode = os.environ.get('PGSSLMODE', 'require')
+        
         if password:
-            return f"postgresql://{os.environ['PGUSER']}:{password}@{os.environ['PGHOST']}:{os.environ['PGPORT']}/{os.environ['PGDATABASE']}?sslmode={os.environ['PGSSLMODE']}"
+            return f"postgresql://{user}:{password}@{host}:{port}/{database}?sslmode={sslmode}"
         else:
             # For Databricks Apps, password might be empty or use service principal
-            return f"postgresql://{os.environ['PGUSER']}@{os.environ['PGHOST']}:{os.environ['PGPORT']}/{os.environ['PGDATABASE']}?sslmode={os.environ['PGSSLMODE']}"
+            return f"postgresql://{user}@{host}:{port}/{database}?sslmode={sslmode}"
     else:
         # Development: Use local PostgreSQL or fallback to JSON
         return None

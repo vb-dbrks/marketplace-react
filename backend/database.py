@@ -15,6 +15,8 @@ class DatabaseService:
                 error_msg = str(e)
                 if "Invalid authorization" in error_msg or "databricks token" in error_msg or "Failed to decode token" in error_msg:
                     raise Exception(f"❌ Database connection failed: Invalid or expired Databricks token. Please refresh your token and try again. Original error: {error_msg}")
+                elif "'PGUSER'" in error_msg or "KeyError" in error_msg:
+                    raise Exception(f"❌ Database connection failed: Missing required environment variables. Please set PGHOST, PGUSER, PGDATABASE, PGPORT, PGSSLMODE, and PGPASSWORD. Original error: {error_msg}")
                 else:
                     raise Exception(f"❌ Database connection failed: {error_msg}")
     
