@@ -6,6 +6,18 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Project-specific
+backend/venv/
+backend/__pycache__/
+backend/static/
+backend/*.backup
+backend/test_*.py
+backend/migrate_*.py
+backend/set_*.sh
+backend/README_*.md
+frontend/dist/
+*.log
+
 # Runtime data
 pids
 *.pid

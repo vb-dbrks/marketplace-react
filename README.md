@@ -1,162 +1,190 @@
-# Internal Data Marketplace
+# Data Marketplace
 
-A React + FastAPI application for managing internal data products at Astellas.
+A modern React + FastAPI application for managing and discovering data products, with seamless deployment on Databricks Apps and Lakebase PostgreSQL integration.
 
-## Project Structure
+## 🚀 Features
+
+- **🔍 Advanced Search & Filtering**: Find data products with powerful search and filter capabilities
+- **📝 Product Management**: Add, edit, and manage data products through an intuitive interface
+- **🔄 Real-time Updates**: Live data synchronization across all users
+- **📱 Responsive Design**: Modern Material-UI interface that works on all devices
+- **☁️ Cloud Ready**: Seamless deployment on Databricks Apps with Lakebase integration
+- **🗄️ Flexible Storage**: Automatic fallback from PostgreSQL to JSON for development
+- **🔒 Production Security**: Built-in security best practices and input validation
+
+## 🏗️ Architecture
 
 ```
-marketplace-react/
-├── frontend/           # React frontend
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── context/      # Context providers and data
-│   │   ├── utils/        # Utility functions
-│   │   └── assets/       # Images and static assets
-│   └── package.json
-├── backend/           # FastAPI backend
-│   ├── app.py          # Main FastAPI application
-│   └── dataProducts.json  # Data products database
-└── README.md
+data-marketplace/
+├── frontend/           # React frontend (Vite + Material-UI)
+│   ├── src/components/ # React components
+│   ├── src/context/    # Data context and state management
+│   └── src/utils/      # API utilities
+├── backend/            # FastAPI backend
+│   ├── app.py          # Main application
+│   ├── models.py       # SQLAlchemy database models
+│   ├── database.py     # Database service layer
+│   └── dataProducts.json # Fallback JSON storage
+├── deploy.sh           # Bash deployment script (Linux/Mac)
+├── deploy.ps1          # PowerShell deployment script (Windows)
+└── requirements.txt    # Python dependencies
 ```
 
-## Features
+## 🛠️ Technology Stack
 
-- Browse and search available data products
-- Filter products by domain, type, and other attributes
-- View detailed product information including links to Databricks and Tableau
-- Add and edit data products through an authoring interface
-- RESTful API for data management
-- Material-UI based responsive interface
+- **Frontend**: React 18, Material-UI v7, Vite, React Router
+- **Backend**: FastAPI, SQLAlchemy, PostgreSQL, Pydantic
+- **Database**: Lakebase (PostgreSQL) with JSON fallback
+- **Deployment**: Databricks Apps Platform
+- **Development**: Hot reload, TypeScript support, ESLint
 
-## Technology Stack
+## ⚡ Quick Start
 
-- **Frontend**:
-  - React 18+
-  - Material-UI v7
-  - React Router
-  - Vite (build tool)
-- **Backend**:
-  - FastAPI
-  - Python 3.12+
-- **Deployment**:
-  - Databricks Apps Platform
-
-## Setup
-
-### Backend
-
-1. Create a Python virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Mac/Linux
-# or
-.\venv\Scripts\activate   # On Windows
-```
-
-2. Install dependencies:
-```bash
-pip install fastapi uvicorn
-```
-
-3. Start the FastAPI server:
-```bash
-cd backend
-uvicorn app:app --reload --port 8000
-```
-
-### Frontend
-
-1. Install dependencies:
-```bash
-cd frontend
-npm install
-```
-
-2. Start the development server:
-```bash
-npm run dev
-```
-
-## API Endpoints
-
-- `GET /api/data-products`: Retrieve all data products
-- `PUT /api/data-products`: Update data products
-
-The API documentation is available at `/docs` when running the backend server.
-
-## Development
-
-The development servers run at:
-- Frontend: http://localhost:5173
-- Backend: http://localhost:8000
-- API Documentation: http://localhost:8000/docs
+### Prerequisites
+- Python 3.12+
+- Node.js 18+
+- Git
+- Databricks CLI (for deployment)
 
 ### Local Development
 
-1. Start the backend server (from backend directory):
+1. **Clone the Repository**:
 ```bash
-uvicorn app:app --reload --port 8000
+git clone <repository-url>
+cd data-marketplace
 ```
 
-2. In a separate terminal, start the frontend dev server:
+2. **Backend Setup**:
+```bash
+cd backend
+pip install -r requirements.txt
+python app.py
+```
+
+3. **Frontend Setup** (in a new terminal):
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 
-## Deployment
+4. **Access the Application**:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
 
-The application is deployed to Databricks Apps Platform. Use the deployment script:
+## 🗄️ Database Configuration
+
+The app automatically detects the environment:
+
+- **Development**: Uses JSON file storage (`dataProducts.json`)
+- **Production**: Uses PostgreSQL via Lakebase
+
+### Environment Variables (Production)
+When deployed to Databricks Apps with Lakebase, these are automatically set:
+```bash
+PGHOST=your-postgres-host
+PGDATABASE=your-database-name
+PGUSER=your-service-principal
+PGPORT=5432
+PGSSLMODE=require
+```
+
+## 🚀 Deployment
+
+### Deploy to Databricks Apps
+
+**Linux/Mac:**
 ```bash
 ./deploy.sh [workspace-path] [app-name]
 ```
 
-Example:
-```bash
-./deploy.sh "/Workspace/Users/username/marketplace-react" "internalmarketplace-react"
+**Windows:**
+```powershell
+.\deploy.ps1 -AppFolderInWorkspace "[workspace-path]" -LakehouseAppName "[app-name]"
 ```
 
-### Deployment Prerequisites
+**Example:**
+```bash
+./deploy.sh "/Workspace/Users/username/data-marketplace" "my-data-marketplace"
+```
 
-- Databricks CLI installed and configured
-- Access to Databricks workspace
-- Permissions to deploy applications
+### Prerequisites for Production
+1. Add Lakebase database resource in Databricks Apps UI
+2. Configure service principal permissions
+3. Deploy using the provided script
 
-## Data Structure
+## 📊 API Endpoints
 
-Data products are stored in `dataProducts.json` with the following schema:
+- `GET /api/data-products` - Retrieve all products
+- `PUT /api/data-products` - Update products
+- `GET /api/database-status` - Check storage type
+- `GET /health` - Health check
+
+## 🔧 Configuration
+
+### Database Models
+- `data_products`: Main product information
+- `data_product_tags`: Normalized tag storage
+
+### Data Schema
 ```json
 {
   "id": "string",
-  "name": "string",
+  "name": "string", 
   "description": "string",
-  "purpose": "string",
   "type": "string",
   "domain": "string",
-  "region": "string",
   "owner": "string",
-  "certified": "string",
-  "classification": "string",
-  "gxp": "string",
-  "interval_of_change": "string",
-  "last_updated_date": "string",
-  "first_publish_date": "string",
-  "next_reassessment_date": "string",
-  "security_considerations": "string",
-  "business_function": "string",
   "databricks_url": "string",
-  "tableau_url": "string (optional)",
+  "tableau_url": "string",
   "tags": ["string"]
 }
 ```
 
-## Contributing
+## 🔒 Security & Best Practices
 
-1. Create a new branch for your feature
+- ✅ Databricks Apps best practices compliance
+- ✅ Environment-based configuration
+- ✅ Input validation and sanitization
+- ✅ Graceful shutdown handling
+- ✅ Proper error handling and logging
+- ✅ CORS configuration for production
+
+## 📝 Development Notes
+
+- The app uses smart fallback: JSON in dev, PostgreSQL in production
+- All database operations are handled through the `database.py` service layer
+- Frontend uses React Context for state management
+- API endpoints maintain backward compatibility
+
+## 🤝 Contributing
+
+1. Create a feature branch
 2. Make your changes
-3. Test locally
+3. Test locally with both JSON and database modes
 4. Submit a pull request
 
-## License
+## 📄 License
 
-Proprietary - Astellas Internal Use Only
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built with [React](https://reactjs.org/) and [Material-UI](https://mui.com/)
+- Backend powered by [FastAPI](https://fastapi.tiangolo.com/)
+- Database integration with [SQLAlchemy](https://www.sqlalchemy.org/)
+- Deployed on [Databricks Apps](https://docs.databricks.com/apps/index.html) with [Lakebase](https://docs.databricks.com/lakebase/index.html)
+
+## 📞 Support
+
+If you encounter any issues or have questions, please:
+1. Check the [Issues](https://github.com/your-username/data-marketplace/issues) page
+2. Create a new issue with detailed information
+3. Follow the contributing guidelines
+
+## 🔄 Version History
+
+- **v1.0.0** - Initial release with React + FastAPI + Lakebase integration
+- **v1.1.0** - Added cross-platform deployment scripts
+- **v1.2.0** - Enhanced security and best practices compliance

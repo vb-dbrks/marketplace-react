@@ -1,49 +1,80 @@
 # PowerShell deployment script for Databricks Apps
-# Save this as deploy.ps1 in your project root
+# Usage: .\deploy.ps1 [workspace-path] [app-name]
 
 param(
     [string]$AppFolderInWorkspace = "/Workspace/Users/varun.bhandary@databricks.com/internalmarketplace-react",
     [string]$LakehouseAppName = "internalmarketplace-react"
 )
 
-# Safety check for workspace path
-if (-not ($AppFolderInWorkspace -like "/Workspace/*")) {
-    Write-Host "ERROR: AppFolderInWorkspace must be a Databricks workspace path starting with /Workspace/."
-    Write-Host "Usage: .\deploy.ps1 -AppFolderInWorkspace '/Workspace/Users/your.email@company.com/internalmarketplace-react' -LakehouseAppName 'appname'"
+Write-Host "🚀 Starting Databricks Apps deployment..." -ForegroundColor Green
+Write-Host "📁 Workspace Path: $AppFolderInWorkspace" -ForegroundColor Cyan
+Write-Host "📱 App Name: $LakehouseAppName" -ForegroundColor Cyan
+
+# Frontend build and import
+Write-Host "`n📦 Building frontend..." -ForegroundColor Yellow
+Set-Location frontend
+Remove-Item .env -ErrorAction SilentlyContinue
+npm run build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Frontend build failed!" -ForegroundColor Red
     exit 1
 }
 
-# Frontend build and import
-Push-Location frontend
-npm install
-npm run build
-Pop-Location
-
-# Import frontend static files to Databricks workspace
-& databricks workspace import-dir "frontend/dist" "$AppFolderInWorkspace/static" --overwrite
+Write-Host "📤 Uploading frontend to Databricks..." -ForegroundColor Yellow
+databricks workspace import-dir dist "$AppFolderInWorkspace/static" --overwrite
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Frontend upload failed!" -ForegroundColor Red
+    exit 1
+}
+Set-Location ..
 
 # Backend packaging
-Push-Location backend
-if (Test-Path build) { Remove-Item build -Recurse -Force }
-New-Item -ItemType Directory -Path build | Out-Null
+Write-Host "`n📦 Packaging backend..." -ForegroundColor Yellow
+Set-Location backend
+New-Item -ItemType Directory -Path build -Force | Out-Null
 
-Get-ChildItem -Directory | Where-Object { $_.Name -notin @('build', '__pycache__') } | ForEach-Object {
-    Copy-Item $_.FullName -Destination build -Recurse
+# Copy all files except hidden files and build directory
+Get-ChildItem -Path . -Force | Where-Object { 
+    $_.Name -notlike ".*" -and 
+    $_.Name -ne "build" -and 
+    $_.Name -ne "__pycache__" -and
+    $_.Name -notlike "local_conf*"
+} | ForEach-Object {
+    if ($_.PSIsContainer) {
+        Copy-Item -Path $_.FullName -Destination "build\$($_.Name)" -Recurse
+    } else {
+        Copy-Item -Path $_.FullName -Destination "build\$($_.Name)"
+    }
 }
-Get-ChildItem -File | Where-Object { $_.Name -notmatch '^\.' -and $_.Name -notlike 'local_conf*' -and $_.Name -ne 'app_prod.py' } | ForEach-Object {
-    Copy-Item $_.FullName -Destination build
-}
-if (Test-Path app_prod.py) {
-    Copy-Item app_prod.py build/app.py -Force
-}
-Pop-Location
 
-# Import backend build to Databricks workspace
-& databricks workspace import-dir "backend/build" "$AppFolderInWorkspace" --overwrite
-Remove-Item backend/build -Recurse -Force
+# Handle production app file if it exists
+if (Test-Path "app_prod.py") {
+    Copy-Item "app_prod.py" "build/app.py"
+    Write-Host "✅ Using production app configuration" -ForegroundColor Green
+}
+
+Write-Host "📤 Uploading backend to Databricks..." -ForegroundColor Yellow
+databricks workspace import-dir build "$AppFolderInWorkspace" --overwrite
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Backend upload failed!" -ForegroundColor Red
+    exit 1
+}
+
+# Cleanup
+Remove-Item -Path build -Recurse -Force
+Set-Location ..
 
 # Deploy the application
-& databricks apps deploy $LakehouseAppName --source-code-path $AppFolderInWorkspace
+Write-Host "`n🚀 Deploying application..." -ForegroundColor Yellow
+databricks apps deploy "$LakehouseAppName" --source-code-path "$AppFolderInWorkspace"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ App deployment failed!" -ForegroundColor Red
+    exit 1
+}
 
-# Print the app page URL
-Write-Host "Open the app page for details and permission: WORKSPACEURL.com/apps/$LakehouseAppName"
+Write-Host "`n✅ Deployment completed successfully!" -ForegroundColor Green
+Write-Host "🌐 App URL: WORKSPACEURL.com/apps/$LakehouseAppName" -ForegroundColor Cyan
+Write-Host "`n📋 Next steps:" -ForegroundColor Yellow
+Write-Host "   1. Check app status in Databricks UI" -ForegroundColor White
+Write-Host "   2. Configure app permissions" -ForegroundColor White
+Write-Host "   3. Add Lakebase database resource if needed" -ForegroundColor White

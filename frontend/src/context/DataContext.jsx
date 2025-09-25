@@ -1,7 +1,7 @@
 import { createContext, useState, useMemo, useEffect } from 'react';
 
-// Use relative path in production, full URL in dev
-const API_URL = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || 'http://localhost:8000') : '';
+// Use same API configuration as utils/api.js
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // Create the context
 const DataContext = createContext();
@@ -25,10 +25,20 @@ function DataProvider({ children }) {
 
   // Fetch products from the backend API
   useEffect(() => {
+    console.log('DataContext: Fetching products from:', `${API_URL}/api/data-products`);
     fetch(`${API_URL}/api/data-products`)
-      .then(res => res.json())
-      .then(setProducts)
-      .catch(setError)
+      .then(res => {
+        console.log('DataContext: API response status:', res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log('DataContext: Received products:', data.length);
+        setProducts(data);
+      })
+      .catch(err => {
+        console.error('DataContext: API error:', err);
+        setError(err);
+      })
       .finally(() => setLoading(false));
   }, []);
 

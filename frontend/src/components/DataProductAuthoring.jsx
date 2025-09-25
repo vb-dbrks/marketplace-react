@@ -40,7 +40,7 @@ import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { useData } from '../context/useData';
 
 // Use relative path in production, full URL in dev
-const API_URL = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || 'http://localhost:8000') : '';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // Column configuration with all available fields
 const ALL_COLUMNS = [

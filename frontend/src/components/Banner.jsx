@@ -17,7 +17,7 @@ import {
   Edit as EditIcon,
   Home as HomeIcon
 } from '@mui/icons-material';
-import astellasLogo from '../assets/astellas_logo.png';
+import companyLogo from '../assets/company_logo.png';
 
 const Banner = () => {
   const navigate = useNavigate();
@@ -78,8 +78,8 @@ const Banner = () => {
             }}
           >
             <img
-              src={astellasLogo}
-              alt="Astellas Logo"
+              src={companyLogo}
+              alt="Company Logo"
               style={{ 
                 height: 40, 
                 width: 'auto', 

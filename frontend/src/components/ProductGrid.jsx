@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 const ITEMS_PER_PAGE = 9; // 3x3 grid
 
 const ProductGrid = () => {
-  const { filteredProducts, searchTerm } = useData();
+  const { filteredProducts, searchTerm, loading, error } = useData();
   const [page, setPage] = useState(1);
 
   const handlePageChange = (event, value) => {
@@ -24,6 +24,33 @@ const ProductGrid = () => {
   useEffect(() => {
     setPage(1);
   }, [searchTerm]);
+
+  // Show loading or error states
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography>Loading products...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          Error loading products: {error.message}
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (filteredProducts.length === 0) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography>No products found.</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box 
