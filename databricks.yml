@@ -1,0 +1,96 @@
+# Databricks Asset Bundle Configuration for Astellas Data Marketplace
+# This bundle defines the complete application including the web app and database resources
+
+bundle:
+  name: astellas-data-marketplace
+  
+variables:
+  # Environment-specific variables
+  catalog_name:
+    description: "The Unity Catalog name for the data marketplace"
+    default: "astellas_marketplace"
+  
+  database_instance_name:
+    description: "The Lakebase database instance name"
+    default: "marketplace-db"
+  
+  app_name:
+    description: "The name of the Databricks App"
+    default: "astellas-data-marketplace"
+
+# Define the workspace resources
+resources:
+  # Database instance for Lakebase
+  database_instances:
+    marketplace_db:
+      name: ${var.database_instance_name}
+      capacity: CU_1  # Adjust based on your needs
+      
+  # Database catalog for the marketplace
+  database_catalogs:
+    marketplace_catalog:
+      name: ${var.catalog_name}
+      database_instance_name: ${resources.database_instances.marketplace_db.name}
+      database_name: "marketplace_app"
+      create_database_if_not_exists: true
+      
+  # The main web application
+  apps:
+    marketplace_app:
+      name: ${var.app_name}
+      description: "Astellas Internal Data Marketplace - Discover, explore, and manage data products"
+      
+      # Point to the app source code directory
+      source_code_path: ./src
+      
+      # Define the database resources this app can access
+      resources:
+        - name: "marketplace-database"
+          database:
+            id: ${resources.database_catalogs.marketplace_catalog.id}
+            permission: "CAN_MANAGE"
+      
+      # App permissions - adjust based on your organization's needs
+      permissions:
+        - user_name: "admins"
+          level: "CAN_MANAGE"
+        - group_name: "data-engineers" 
+          level: "CAN_MANAGE"
+        - group_name: "data-analysts"
+          level: "CAN_VIEW"
+
+# Environment-specific configurations
+environments:
+  development:
+    default: true
+    mode: development
+    workspace:
+      host: https://your-workspace.cloud.databricks.com
+    variables:
+      catalog_name: "dev_astellas_marketplace"
+      database_instance_name: "dev-marketplace-db"
+      app_name: "dev-astellas-data-marketplace"
+    
+  production:
+    mode: production
+    workspace:
+      host: https://your-prod-workspace.cloud.databricks.com
+    variables:
+      catalog_name: "astellas_marketplace"
+      database_instance_name: "marketplace-db"
+      app_name: "astellas-data-marketplace"
+
+# Include patterns for deployment
+include:
+  - "src/**"
+  - "resources/**"
+  - "README.md"
+
+# Exclude patterns to keep bundle size manageable
+exclude:
+  - "frontend/node_modules/**"
+  - "backend/__pycache__/**"
+  - "**/*.pyc"
+  - ".git/**"
+  - "*.log"
+  - "*.tmp"

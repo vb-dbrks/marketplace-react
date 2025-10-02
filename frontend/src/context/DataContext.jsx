@@ -1,7 +1,16 @@
 import { createContext, useState, useMemo, useEffect } from 'react';
 
 // Use same API configuration as utils/api.js
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  if (typeof window !== 'undefined' && window.location) {
+    return window.location.origin;
+  }
+  return '';
+};
+const API_URL = getApiUrl();
 
 // Create the context
 const DataContext = createContext();

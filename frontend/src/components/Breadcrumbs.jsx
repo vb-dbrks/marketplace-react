@@ -4,7 +4,8 @@ import { useLocation, Link as RouterLink, useParams } from 'react-router-dom';
 import {
   Home as HomeIcon,
   Edit as EditIcon,
-  Dashboard as DashboardIcon
+  Dashboard as DashboardIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 
 const Breadcrumbs = () => {
@@ -19,6 +20,8 @@ const Breadcrumbs = () => {
         return 'Data Product Authoring';
       case 'browse':
         return 'Browse Products';
+      case 'add':
+        return 'Add New Product';
       default:
         return decodeURIComponent(pathname);
     }
@@ -31,6 +34,8 @@ const Breadcrumbs = () => {
         return <EditIcon sx={{ fontSize: 18, mr: 0.5 }} />;
       case 'browse':
         return <DashboardIcon sx={{ fontSize: 18, mr: 0.5 }} />;
+      case 'add':
+        return <AddIcon sx={{ fontSize: 18, mr: 0.5 }} />;
       default:
         return null;
     }

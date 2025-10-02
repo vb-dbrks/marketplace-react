@@ -1,0 +1,7 @@
+command: ["python", "app.py"]
+env:
+  - name: DATABRICKS_APP_PORT
+    value: "8000"
+  # Database connection will be provided via the marketplace-database resource
+  - name: DATABASE_RESOURCE_NAME
+    valueFrom: "marketplace-database"

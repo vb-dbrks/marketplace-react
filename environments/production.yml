@@ -1,0 +1,24 @@
+# Production environment configuration for Astellas Data Marketplace
+
+variables:
+  catalog_name: "astellas_marketplace"
+  database_instance_name: "marketplace-db"
+  app_name: "astellas-data-marketplace"
+
+resources:
+  database_instances:
+    marketplace_db:
+      capacity: CU_4  # Higher capacity for production
+      
+  apps:
+    marketplace_app:
+      # Production-specific permissions
+      permissions:
+        - group_name: "data-platform-admins"
+          level: "CAN_MANAGE"
+        - group_name: "data-engineers"
+          level: "CAN_MANAGE"
+        - group_name: "data-analysts"
+          level: "CAN_VIEW"
+        - group_name: "business-users"
+          level: "CAN_VIEW"

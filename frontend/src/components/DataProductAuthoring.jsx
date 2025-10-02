@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -40,11 +41,20 @@ import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { useData } from '../context/useData';
 
 // Use relative path in production, full URL in dev
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  if (typeof window !== 'undefined' && window.location) {
+    return window.location.origin;
+  }
+  return '';
+};
+const API_URL = getApiUrl();
 
 // Column configuration with all available fields
 const ALL_COLUMNS = [
-  { field: 'id', headerName: 'ID', width: 120, editable: false, required: true },
+  { field: 'id', headerName: 'ID', width: 120, editable: false, required: false },
   { field: 'name', headerName: 'Product Name', width: 250, editable: true, required: true },
   { field: 'description', headerName: 'Description', width: 300, editable: true, required: true },
   { field: 'purpose', headerName: 'Purpose', width: 300, editable: true, required: true },
@@ -70,17 +80,86 @@ const ALL_COLUMNS = [
   { field: 'interval_of_change', headerName: 'Update Frequency', width: 140, editable: true, type: 'singleSelect', valueOptions: [
     'Real-time', 'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annually', 'Other'
   ]},
-  { field: 'last_updated_date', headerName: 'Last Updated', width: 130, editable: true, required: true, type: 'date' },
-  { field: 'first_publish_date', headerName: 'First Published', width: 140, editable: true, required: true, type: 'date' },
-  { field: 'next_reassessment_date', headerName: 'Next Reassessment', width: 160, editable: true, required: true, type: 'date' },
+  { 
+    field: 'last_updated_date', 
+    headerName: 'Last Updated', 
+    width: 130, 
+    editable: true, 
+    required: true, 
+    type: 'date',
+    valueGetter: (params) => {
+      const value = params.value;
+      if (!value) return null;
+      // Handle both string and Date object inputs
+      if (value instanceof Date) return value;
+      // Convert string to Date
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? null : date;
+    },
+    valueSetter: (params) => {
+      const value = params.newValue;
+      if (!value) return { ...params.row, last_updated_date: '' };
+      // Convert Date to ISO string format
+      const dateString = value instanceof Date ? value.toISOString().split('T')[0] : value;
+      return { ...params.row, last_updated_date: dateString };
+    }
+  },
+  { 
+    field: 'first_publish_date', 
+    headerName: 'First Published', 
+    width: 140, 
+    editable: true, 
+    required: true, 
+    type: 'date',
+    valueGetter: (params) => {
+      const value = params.value;
+      if (!value) return null;
+      // Handle both string and Date object inputs
+      if (value instanceof Date) return value;
+      // Convert string to Date
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? null : date;
+    },
+    valueSetter: (params) => {
+      const value = params.newValue;
+      if (!value) return { ...params.row, first_publish_date: '' };
+      // Convert Date to ISO string format
+      const dateString = value instanceof Date ? value.toISOString().split('T')[0] : value;
+      return { ...params.row, first_publish_date: dateString };
+    }
+  },
+  { 
+    field: 'next_reassessment_date', 
+    headerName: 'Next Reassessment', 
+    width: 160, 
+    editable: true, 
+    required: true, 
+    type: 'date',
+    valueGetter: (params) => {
+      const value = params.value;
+      if (!value) return null;
+      // Handle both string and Date object inputs
+      if (value instanceof Date) return value;
+      // Convert string to Date
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? null : date;
+    },
+    valueSetter: (params) => {
+      const value = params.newValue;
+      if (!value) return { ...params.row, next_reassessment_date: '' };
+      // Convert Date to ISO string format
+      const dateString = value instanceof Date ? value.toISOString().split('T')[0] : value;
+      return { ...params.row, next_reassessment_date: dateString };
+    }
+  },
   { field: 'security_considerations', headerName: 'Security', width: 200, editable: true },
-  { field: 'business_function', headerName: 'Business Function', width: 160, editable: true, required: true, type: 'singleSelect', valueOptions: [
+  { field: 'sub_domain', headerName: 'Sub Domain', width: 160, editable: true, required: true, type: 'singleSelect', valueOptions: [
     'Commercial', 'Clinical Research', 'Supply Chain', 'Drug Safety', 'Finance', 'HR', 'IT', 'R&D'
   ]},
   { field: 'databricks_url', headerName: 'Databricks URL', width: 200, editable: true, type: 'string' },
   { field: 'tableau_url', headerName: 'Tableau URL', width: 200, editable: true, type: 'string' },
-  { field: 'ai_bi_genie_url', headerName: 'AI/BI Genie URL', width: 200, editable: true, type: 'string' },
-  { field: 'request_access_url', headerName: 'Request Access URL', width: 200, editable: true, type: 'string' },
+  { field: 'qlik_url', headerName: 'Qlik URL', width: 200, editable: true, type: 'string' },
+  { field: 'data_contract_url', headerName: 'Data Contract URL', width: 200, editable: true, type: 'string' },
   { field: 'tags', headerName: 'Tags', width: 200, editable: true, type: 'string' }
 ];
 
@@ -141,147 +220,14 @@ function ColumnSelector({ open, onClose, columns, selectedColumns, onColumnToggl
   );
 }
 
-function AddProductDialog({ open, onClose, onSave, loading }) {
-  const [form, setForm] = useState({});
-  const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (open) {
-      setForm({});
-      setErrors({});
-    }
-  }, [open]);
-
-  const handleChange = (field, value) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    ALL_COLUMNS.forEach(column => {
-      if (column.required && (!form[column.field] || form[column.field].length === 0)) {
-        newErrors[column.field] = `${column.headerName} is required`;
-      }
-    });
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = () => {
-    if (validateForm()) {
-      const productToAdd = {
-        ...form,
-        id: `DP${Date.now().toString().slice(-6)}`,
-        first_publish_date: form.first_publish_date || new Date().toISOString().split('T')[0],
-        last_updated_date: new Date().toISOString().split('T')[0],
-        next_reassessment_date: form.next_reassessment_date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        tags: Array.isArray(form.tags) ? form.tags : (form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [])
-      };
-      onSave(productToAdd);
-    }
-  };
-
-  const renderField = (column) => {
-    const value = form[column.field] || '';
-    const error = errors[column.field];
-
-    switch (column.type) {
-      case 'singleSelect':
-        return (
-          <FormControl fullWidth size="small" error={!!error}>
-            <InputLabel>{column.headerName}</InputLabel>
-            <Select
-              value={value}
-              onChange={(e) => handleChange(column.field, e.target.value)}
-              label={column.headerName}
-            >
-              {column.valueOptions.map(option => (
-                <MenuItem key={option} value={option}>{option}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        );
-      
-      case 'date':
-        return (
-          <TextField
-            type="date"
-            label={column.headerName}
-            value={value}
-            onChange={(e) => handleChange(column.field, e.target.value)}
-            fullWidth
-            size="small"
-            error={!!error}
-            helperText={error}
-            InputLabelProps={{ shrink: true }}
-          />
-        );
-      
-      case 'tags':
-        return (
-          <TextField
-            label={column.headerName}
-            value={Array.isArray(value) ? value.join(', ') : value}
-            onChange={(e) => handleChange(column.field, e.target.value)}
-            fullWidth
-            size="small"
-            error={!!error}
-            helperText={error}
-            placeholder="Enter tags separated by commas"
-          />
-        );
-      
-      default:
-        return (
-          <TextField
-            label={column.headerName}
-            value={value}
-            onChange={(e) => handleChange(column.field, e.target.value)}
-            fullWidth
-            size="small"
-            error={!!error}
-            helperText={error}
-            multiline={column.field === 'description' || column.field === 'purpose'}
-            rows={column.field === 'description' || column.field === 'purpose' ? 3 : 1}
-          />
-        );
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>Add New Data Product</DialogTitle>
-      <DialogContent>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          {ALL_COLUMNS.filter(col => col.field !== 'id').map((column) => (
-            <Grid item xs={12} sm={6} key={column.field}>
-              {renderField(column)}
-            </Grid>
-          ))}
-        </Grid>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
-          Cancel
-        </Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
-          Add Product
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
 
 export default function DataProductAuthoring() {
+  const navigate = useNavigate();
   const { allProducts, setProducts, reloadProducts, loading, error } = useData();
   const [selectedColumns, setSelectedColumns] = useState(() => 
     ALL_COLUMNS.slice(0, 8).map(col => col.field) // Start with first 8 columns
   );
   const [showColumnSelector, setShowColumnSelector] = useState(false);
-  const [showAddDialog, setShowAddDialog] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -372,24 +318,6 @@ export default function DataProductAuthoring() {
     }
   };
 
-  const handleAdd = async (newProduct) => {
-    try {
-      const updated = [...allProducts, newProduct];
-      setProducts(updated);
-      
-      await fetch(`${API_URL}/api/data-products`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
-      });
-      
-      await reloadProducts();
-      setShowAddDialog(false);
-      showSnackbar('Product added successfully');
-    } catch {
-      showSnackbar('Failed to add product', 'error');
-    }
-  };
 
   const handleDelete = async (product) => {
     try {
@@ -566,7 +494,13 @@ export default function DataProductAuthoring() {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setShowAddDialog(true)}
+            onClick={() => {
+              console.log('🚀 Add New Product button clicked!');
+              console.log('🧭 Current location:', window.location.href);
+              console.log('📍 Navigating to /authoring/add');
+              navigate('/authoring/add');
+              console.log('✅ Navigate function called');
+            }}
           >
             Add New Product
           </Button>
@@ -666,13 +600,6 @@ export default function DataProductAuthoring() {
         />
       )}
 
-      {/* Add Product Dialog */}
-      <AddProductDialog
-        open={showAddDialog}
-        onClose={() => setShowAddDialog(false)}
-        onSave={handleAdd}
-        loading={loading}
-      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deletingProduct} onClose={() => setDeletingProduct(null)}>

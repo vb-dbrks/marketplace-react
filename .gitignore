@@ -516,3 +516,22 @@ out/
 .env.production.local
 backend/.env
 backend/config.local.env
+
+# Databricks Asset Bundle specific
+src/static/          # Built frontend files (auto-generated)
+.databricks/         # Databricks CLI cache
+*.bundle.json        # Bundle deployment artifacts
+
+# Optional: Frontend development directory
+# Uncomment the next line if you want to exclude frontend/ from version control
+# frontend/
+
+# macOS system files
+.DS_Store
+.DS_Store?
+._*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

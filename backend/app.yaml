@@ -1,6 +1,0 @@
-command: ["python", "app.py"]
-env:
-  - name: DATABRICKS_APP_PORT
-    value: "8000"
-  # Lakebase environment variables will be automatically set by Databricks
-  # when you add a database resource to your app 

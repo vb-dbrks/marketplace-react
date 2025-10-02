@@ -6,6 +6,7 @@ import Banner from './components/Banner';
 import Breadcrumbs from './components/Breadcrumbs';
 import ProductDetail from './components/ProductDetail';
 import DataProductAuthoring from './components/DataProductAuthoring';
+import AddNewProduct from './components/AddNewProduct';
 import { DataProvider } from './context/DataContext';
 
 const theme = createTheme({
@@ -60,6 +61,7 @@ function App() {
                   </>
                 } />
                 <Route path="/authoring" element={<DataProductAuthoring />} />
+                <Route path="/authoring/add" element={<AddNewProduct />} />
                 <Route path="/:id" element={<ProductDetail />} />
               </Routes>
             </Box>

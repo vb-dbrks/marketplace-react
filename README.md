@@ -1,6 +1,22 @@
-# Data Marketplace
+# Astellas Data Marketplace
 
-A modern React + FastAPI application for managing and discovering data products, with seamless deployment on Databricks Apps and Lakebase PostgreSQL integration.
+A modern React + FastAPI application for managing and discovering data products, now restructured for deployment using **Databricks Asset Bundles**.
+
+> **🚨 IMPORTANT**: This repository has been restructured to use [Databricks Asset Bundles](https://docs.databricks.com/aws/en/dev-tools/bundles/resources#apps). For the new deployment approach, see [README-ASSET-BUNDLES.md](./README-ASSET-BUNDLES.md).
+
+## 🆕 New Deployment Method (Recommended)
+
+**Use Databricks Asset Bundles for modern, scalable deployment:**
+
+```bash
+# Quick deployment
+./deploy-bundle.sh development
+
+# Or for production
+./deploy-bundle.sh production
+```
+
+📖 **[Read the full Asset Bundles guide →](./README-ASSET-BUNDLES.md)**
 
 ## 🚀 Features
 
