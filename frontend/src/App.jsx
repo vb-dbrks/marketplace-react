@@ -8,6 +8,8 @@ import ProductDetail from './components/ProductDetail';
 import DataProductAuthoring from './components/DataProductAuthoring';
 import AddNewProduct from './components/AddNewProduct';
 import { DataProvider } from './context/DataContext';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const theme = createTheme({
   palette: {
@@ -34,7 +36,8 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <DataProvider>
+        <AuthProvider>
+          <DataProvider>
           <Box sx={{ 
             display: 'flex', 
             flexDirection: 'column', 
@@ -47,7 +50,7 @@ function App() {
             <Box sx={{ 
               flexGrow: 1,
               width: '100%',
-              mt: '64px', // Height of the banner
+              mt: '72px', // Updated height of the enhanced banner
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'stretch'
@@ -60,13 +63,22 @@ function App() {
                     <ProductGrid />
                   </>
                 } />
-                <Route path="/authoring" element={<DataProductAuthoring />} />
-                <Route path="/authoring/add" element={<AddNewProduct />} />
+                <Route path="/authoring" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <DataProductAuthoring />
+                  </ProtectedRoute>
+                } />
+                <Route path="/authoring/add" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AddNewProduct />
+                  </ProtectedRoute>
+                } />
                 <Route path="/:id" element={<ProductDetail />} />
               </Routes>
             </Box>
           </Box>
-        </DataProvider>
+          </DataProvider>
+        </AuthProvider>
       </Router>
     </ThemeProvider>
   );

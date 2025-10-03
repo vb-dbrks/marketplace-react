@@ -8,3 +8,8 @@ env:
   # Lakebase database connection details will be automatically provided
   - name: LAKEBASE_DATABASE_NAME
     value: "marketplace_app"
+  # Comma-separated list of admin users (email addresses recommended)
+  # The system will check against email (from gap-auth header), username, and display_name
+  # Example: "admin@company.com,user2@company.com"
+  - name: MARKETPLACE_ADMIN_USERS
+    value: "admin@company.com"

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -134,6 +134,195 @@ class HealthResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
 
+class UserInfo(BaseModel):
+    username: str
+    is_admin: bool
+    groups: List[str]
+
+# Group membership checking
+ADMIN_GROUP = "marketplace_app_admins"  # Configure this to match your organization's admin group
+
+def get_current_user_info(request: Request = None) -> UserInfo:
+    """Get current user information from Databricks context"""
+    try:
+        from databricks.sdk import WorkspaceClient
+        import requests
+        
+        # Get the current user from Databricks context
+        workspace_client = WorkspaceClient()
+        current_user = workspace_client.current_user.me()
+        username = current_user.user_name
+        
+        # Extract email from gap-auth header if available
+        user_email = None
+        if request and hasattr(request, 'headers'):
+            user_email = request.headers.get('gap-auth')
+            if user_email:
+                logging.info(f"Found user email in gap-auth header: {user_email}")
+        
+        logging.info(f"Current user: {username}, email: {user_email}")
+        
+        # Check if user has workspace admin role
+        is_admin = False
+        user_roles = []
+        
+        try:
+            # Method 1: Check workspace permissions using user's forwarded token
+            user_access_token = None
+            if request and hasattr(request, 'headers'):
+                user_access_token = request.headers.get('x-forwarded-access-token')
+                logging.info("Found user access token in forwarded headers")
+            
+            if user_access_token:
+                workspace_host = workspace_client.config.host
+                logging.info(f"Workspace host: {workspace_host}")
+                
+                # Check workspace permissions using the user's token
+                try:
+                    # Use workspace permissions API to check if user is admin
+                    permissions_url = f"{workspace_host}/api/2.0/permissions/authorization/workspace"
+                    headers = {
+                        'Authorization': f'Bearer {user_access_token}',
+                        'Content-Type': 'application/json'
+                    }
+                    
+                    logging.info("Checking workspace permissions...")
+                    response = requests.get(permissions_url, headers=headers)
+                    
+                    if response.status_code == 200:
+                        permissions_data = response.json()
+                        logging.info(f"Workspace permissions response: {permissions_data}")
+                        
+                        # Check if user has admin permissions
+                        if permissions_data.get('is_admin', False):
+                            is_admin = True
+                            user_roles.append('workspace_admin')
+                            logging.info("User has workspace admin permissions")
+                        else:
+                            logging.info("User does not have workspace admin permissions")
+                    else:
+                        logging.warning(f"Workspace permissions API call failed: {response.status_code} - {response.text}")
+                        
+                except Exception as permissions_error:
+                    logging.warning(f"Could not check workspace permissions via API: {permissions_error}")
+            
+            # Method 2: Fallback - Check using SDK workspace client
+            if not is_admin:
+                logging.info("Trying SDK-based workspace admin check...")
+                try:
+                    # Try to list workspace users - only admins can do this
+                    users_list = list(workspace_client.users.list())
+                    if users_list is not None:
+                        is_admin = True
+                        user_roles.append('workspace_admin')
+                        logging.info("User can list workspace users - has admin permissions")
+                except Exception as sdk_error:
+                    logging.info(f"User cannot list workspace users - not admin: {sdk_error}")
+            
+            # Method 3: Check workspace groups for admin-like groups
+            if not is_admin:
+                logging.info("Checking workspace groups for admin roles...")
+                try:
+                    all_groups = list(workspace_client.groups.list())
+                    logging.info(f"Found {len(all_groups)} workspace groups")
+                    
+                    # Look for admin-related groups
+                    admin_group_names = ['admins', 'admin', 'workspace_admins', 'administrators', ADMIN_GROUP.lower()]
+                    
+                    for group in all_groups:
+                        group_name = getattr(group, 'display_name', '').lower()
+                        if any(admin_name in group_name for admin_name in admin_group_names):
+                            try:
+                                members = list(workspace_client.groups.list_members(group.id))
+                                for member in members:
+                                    member_name = None
+                                    if hasattr(member, 'user_name'):
+                                        member_name = member.user_name
+                                    elif hasattr(member, 'display_name'):
+                                        member_name = member.display_name
+                                    
+                                    if member_name == username:
+                                        is_admin = True
+                                        user_roles.append(f'group_member:{group_name}')
+                                        logging.info(f"Found membership in admin group: {group_name}")
+                                        break
+                                        
+                                if is_admin:
+                                    break
+                            except Exception as member_error:
+                                logging.debug(f"Could not check membership for group {group.id}: {member_error}")
+                                continue
+                                
+                except Exception as groups_error:
+                    logging.warning(f"Could not check workspace groups: {groups_error}")
+            
+            # Method 4: Environment variable override for specific users
+            import os
+            admin_users_env = os.getenv('MARKETPLACE_ADMIN_USERS', '')
+            if admin_users_env and not is_admin:
+                admin_users = [user.strip() for user in admin_users_env.split(',')]
+                
+                # Check against multiple user identifiers
+                user_identifiers = [username]  # UUID username
+                if user_email:
+                    user_identifiers.append(user_email)  # Email from gap-auth header
+                if hasattr(current_user, 'display_name') and current_user.display_name:
+                    user_identifiers.append(current_user.display_name)  # Display name from user object
+                
+                # Check if any of the user identifiers match the admin list
+                for identifier in user_identifiers:
+                    if identifier in admin_users:
+                        is_admin = True
+                        user_roles.append(f'env_override:{identifier}')
+                        logging.info(f"User granted admin access via MARKETPLACE_ADMIN_USERS (matched: {identifier})")
+                        break
+            
+            logging.info(f"Final result - User {username}, roles: {user_roles}, is_admin: {is_admin}")
+            
+            return UserInfo(
+                username=user_email if user_email else username,  # Prefer email over UUID
+                is_admin=is_admin,
+                groups=user_roles  # Using roles instead of groups for clarity
+            )
+            
+        except Exception as role_error:
+            logging.error(f"Error checking user roles for {username}: {role_error}")
+            logging.error(f"Role error type: {type(role_error).__name__}")
+            
+            # For development/testing - you can temporarily override this
+            # TEMPORARY: Uncomment the next 3 lines if you want to test as admin
+            # return UserInfo(
+            #     username=username,
+            #     is_admin=True,  # TEMPORARY OVERRIDE
+            #     groups=['temporary_override']
+            # )
+            
+            return UserInfo(
+                username=username,
+                is_admin=False,
+                groups=[]
+            )
+            
+    except Exception as e:
+        logging.error(f"Could not get current user info: {e}")
+        logging.error(f"Error type: {type(e).__name__}")
+        # Return a default user for development/testing
+        return UserInfo(
+            username="unknown",
+            is_admin=False,
+            groups=[]
+        )
+
+def require_admin_access(request: Request):
+    """Dependency to require admin access"""
+    user_info = get_current_user_info(request)
+    if not user_info.is_admin:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Access denied. Admin access required. User must be member of '{ADMIN_GROUP}' group."
+        )
+    return user_info
+
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -172,13 +361,14 @@ def get_data_products():
 @app.put('/api/data-products',
          response_model=UpdateResponse,
          summary="Update all data products",
-         description="Replace all data products in the database with the provided list",
+         description="Replace all data products in the database with the provided list (Admin only)",
          responses={
              200: {"model": UpdateResponse, "description": "Products updated successfully"},
              400: {"model": ErrorResponse, "description": "Invalid input data"},
+             403: {"model": ErrorResponse, "description": "Admin access required"},
              500: {"model": ErrorResponse, "description": "Database error"}
          })
-async def update_data_products(products: List[DataProductInput]):
+async def update_data_products(request: Request, products: List[DataProductInput], admin_user: UserInfo = Depends(require_admin_access)):
     """
     Replace all data products in the database with the provided list.
     
@@ -233,16 +423,173 @@ async def update_data_products(products: List[DataProductInput]):
         logging.error(f"❌ Unexpected error in update_data_products: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+@app.get('/api/user-info',
+         response_model=UserInfo,
+         summary="Get current user information",
+         description="Get current user's information including admin status")
+def get_user_info(request: Request):
+    """Get current user information including group memberships and admin status"""
+    return get_current_user_info(request)
+
+@app.get('/api/debug-roles',
+         summary="Debug user roles and permissions",
+         description="Debug endpoint to troubleshoot workspace role and permission issues")
+def debug_roles(request: Request):
+    """Debug endpoint to help troubleshoot user roles and permissions"""
+    try:
+        from databricks.sdk import WorkspaceClient
+        import requests
+        import os
+        
+        workspace_client = WorkspaceClient()
+        current_user = workspace_client.current_user.me()
+        username = current_user.user_name
+        
+        # Extract email from gap-auth header if available
+        user_email = None
+        if request and hasattr(request, 'headers'):
+            user_email = request.headers.get('gap-auth')
+        
+        debug_info = {
+            "current_user": username,
+            "user_email": user_email,
+            "preferred_display": user_email if user_email else username,
+            "display_name": getattr(current_user, 'display_name', 'N/A'),
+            "user_object_attributes": [attr for attr in dir(current_user) if not attr.startswith('_')],
+            "admin_checks": [],
+            "workspace_groups": [],
+            "environment_config": {},
+            "errors": []
+        }
+        
+        # Check environment variables
+        admin_users_env = os.getenv('MARKETPLACE_ADMIN_USERS', '')
+        debug_info["environment_config"] = {
+            "MARKETPLACE_ADMIN_USERS": admin_users_env,
+            "admin_users_list": [user.strip() for user in admin_users_env.split(',')] if admin_users_env else []
+        }
+        
+        # Check if user access token is available
+        user_access_token = None
+        if request and hasattr(request, 'headers'):
+            user_access_token = request.headers.get('x-forwarded-access-token')
+            debug_info["has_user_token"] = bool(user_access_token)
+        
+        # Admin Check 1: Workspace permissions API
+        if user_access_token:
+            try:
+                workspace_host = workspace_client.config.host
+                permissions_url = f"{workspace_host}/api/2.0/permissions/authorization/workspace"
+                headers = {
+                    'Authorization': f'Bearer {user_access_token}',
+                    'Content-Type': 'application/json'
+                }
+                
+                response = requests.get(permissions_url, headers=headers)
+                debug_info["admin_checks"].append({
+                    "method": "workspace_permissions_api",
+                    "status_code": response.status_code,
+                    "response": response.json() if response.status_code == 200 else response.text,
+                    "is_admin": response.json().get('is_admin', False) if response.status_code == 200 else False
+                })
+            except Exception as api_error:
+                debug_info["admin_checks"].append({
+                    "method": "workspace_permissions_api",
+                    "error": str(api_error)
+                })
+        
+        # Admin Check 2: SDK user listing (admin-only operation)
+        try:
+            users_list = list(workspace_client.users.list())
+            debug_info["admin_checks"].append({
+                "method": "sdk_users_list",
+                "can_list_users": True,
+                "users_count": len(users_list),
+                "is_admin": True
+            })
+        except Exception as sdk_error:
+            debug_info["admin_checks"].append({
+                "method": "sdk_users_list",
+                "can_list_users": False,
+                "error": str(sdk_error),
+                "is_admin": False
+            })
+        
+        # Admin Check 3: Workspace groups
+        try:
+            all_groups = list(workspace_client.groups.list())
+            debug_info["workspace_groups_count"] = len(all_groups)
+            
+            admin_group_names = ['admins', 'admin', 'workspace_admins', 'administrators', ADMIN_GROUP.lower()]
+            
+            for group in all_groups:
+                group_name = getattr(group, 'display_name', '')
+                group_info = {
+                    "id": group.id,
+                    "display_name": group_name,
+                    "is_admin_group": any(admin_name in group_name.lower() for admin_name in admin_group_names)
+                }
+                
+                if group_info["is_admin_group"]:
+                    try:
+                        members = list(workspace_client.groups.list_members(group.id))
+                        group_info["members"] = []
+                        group_info["user_is_member"] = False
+                        
+                        for member in members:
+                            member_name = getattr(member, 'user_name', getattr(member, 'display_name', 'N/A'))
+                            group_info["members"].append(member_name)
+                            if member_name == username:
+                                group_info["user_is_member"] = True
+                                
+                    except Exception as member_error:
+                        group_info["member_check_error"] = str(member_error)
+                
+                debug_info["workspace_groups"].append(group_info)
+                
+        except Exception as groups_error:
+            debug_info["errors"].append(f"Could not list workspace groups: {groups_error}")
+        
+        # Admin Check 4: Environment variable override
+        if admin_users_env:
+            admin_users = [user.strip() for user in admin_users_env.split(',')]
+            
+            # Check against multiple user identifiers
+            user_identifiers = [username]  # UUID username
+            if user_email:
+                user_identifiers.append(user_email)  # Email from gap-auth header
+            if hasattr(current_user, 'display_name') and current_user.display_name:
+                user_identifiers.append(current_user.display_name)  # Display name from user object
+            
+            matches = []
+            for identifier in user_identifiers:
+                if identifier in admin_users:
+                    matches.append(identifier)
+            
+            debug_info["admin_checks"].append({
+                "method": "environment_variable",
+                "admin_users_configured": admin_users,
+                "user_identifiers": user_identifiers,
+                "matches": matches,
+                "is_admin": len(matches) > 0
+            })
+        
+        return debug_info
+        
+    except Exception as e:
+        return {"error": f"Debug failed: {e}", "error_type": type(e).__name__}
+
 @app.post('/api/data-products',
           response_model=UpdateResponse,
           summary="Add a new data product",
-          description="Add a single new data product to the database",
+          description="Add a single new data product to the database (Admin only)",
           responses={
               200: {"model": UpdateResponse, "description": "Product added successfully"},
               400: {"model": ErrorResponse, "description": "Invalid input data"},
+              403: {"model": ErrorResponse, "description": "Admin access required"},
               500: {"model": ErrorResponse, "description": "Database error"}
           })
-async def add_data_product(product: DataProductInput):
+async def add_data_product(request: Request, product: DataProductInput, admin_user: UserInfo = Depends(require_admin_access)):
     """
     Add a single new data product to the database.
     

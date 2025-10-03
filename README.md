@@ -1,327 +1,282 @@
-# Astellas Data Marketplace
+# Data Marketplace Application
 
-A modern React + FastAPI application for managing and discovering data products, now restructured for deployment using **Databricks Asset Bundles**.
+A modern, responsive data marketplace application built with React and FastAPI, designed for deployment on Databricks Apps. This application provides a comprehensive platform for discovering, managing, and accessing data products within your organization.
 
-> **🚨 IMPORTANT**: This repository has been restructured to use [Databricks Asset Bundles](https://docs.databricks.com/aws/en/dev-tools/bundles/resources#apps). For the new deployment approach, see [README-ASSET-BUNDLES.md](./README-ASSET-BUNDLES.md).
+## Features
 
-## 🆕 New Deployment Method (Recommended)
+- 🔍 **Advanced Search & Filtering** - Powerful search with real-time filtering by type, domain, region, and classification
+- 👥 **Role-Based Access Control** - Admin-only authoring capabilities with flexible user management
+- 📱 **Responsive Design** - Modern UI that works seamlessly across desktop and mobile devices
+- 🎨 **Customizable Branding** - Easy to customize colors, logos, and styling to match your organization
+- 🔐 **Databricks Integration** - Native integration with Databricks authentication and permissions
+- 📊 **Product Management** - Complete CRUD operations for data products with rich metadata
+- 🏷️ **Tag System** - Flexible tagging system for better product categorization
 
-**Use Databricks Asset Bundles for modern, scalable deployment:**
+## Architecture
 
-```bash
-# Quick deployment
-./deploy-bundle.sh development
+### Frontend (React)
+- **Framework**: React 18 with Vite
+- **UI Library**: Material-UI (MUI) v5
+- **Routing**: React Router v6
+- **State Management**: React Context API
+- **Styling**: Emotion (CSS-in-JS)
 
-# Or for production
-./deploy-bundle.sh production
-```
+### Backend (Python)
+- **Framework**: FastAPI
+- **Database**: PostgreSQL (Databricks Lakebase)
+- **Authentication**: Databricks OAuth integration
+- **API Documentation**: Auto-generated OpenAPI/Swagger docs
 
-📖 **[Read the full Asset Bundles guide →](./README-ASSET-BUNDLES.md)**
-
-## 🚀 Features
-
-- **🔍 Advanced Search & Filtering**: Find data products with powerful search and filter capabilities
-- **📝 Product Management**: Add, edit, and manage data products through an intuitive interface
-- **🔄 Real-time Updates**: Live data synchronization across all users
-- **📱 Responsive Design**: Modern Material-UI interface that works on all devices
-- **☁️ Cloud Ready**: Seamless deployment on Databricks Apps with Lakebase integration
-- **🗄️ Flexible Storage**: Automatic fallback from PostgreSQL to JSON for development
-- **🔒 Production Security**: Built-in security best practices and input validation
-
-## 🏗️ Architecture
-
-```
-data-marketplace/
-├── frontend/           # React frontend (Vite + Material-UI)
-│   ├── src/components/ # React components
-│   ├── src/context/    # Data context and state management
-│   └── src/utils/      # API utilities
-├── backend/            # FastAPI backend
-│   ├── app.py          # Main application
-│   ├── models.py       # SQLAlchemy database models
-│   ├── database.py     # Database service layer
-│   ├── utils/          # Utility scripts
-│   │   └── seed_database.py # Database seeding utility
-│   └── dataProducts.json # Fallback JSON storage
-├── deploy.sh           # Bash deployment script (Linux/Mac)
-├── deploy.ps1          # PowerShell deployment script (Windows)
-└── requirements.txt    # Python dependencies
-```
-
-## 🛠️ Technology Stack
-
-- **Frontend**: React 18, Material-UI v7, Vite, React Router
-- **Backend**: FastAPI, SQLAlchemy, PostgreSQL, Pydantic
-- **Database**: Lakebase (PostgreSQL) with JSON fallback
-- **Deployment**: Databricks Apps Platform
-- **Development**: Hot reload, TypeScript support, ESLint
-
-## ⚡ Quick Start
+## Quick Start
 
 ### Prerequisites
-- Python 3.12+
-- Node.js 18+
-- Git
-- Databricks CLI (for deployment)
 
-### Local Development
+- Databricks workspace with Apps enabled
+- Node.js 18+ and npm
+- Python 3.9+
+- Access to create Databricks Apps and database resources
 
-1. **Clone the Repository**:
+### 1. Clone and Setup
+
 ```bash
 git clone <repository-url>
-cd data-marketplace
+cd marketplace-react
 ```
 
-2. **Backend Setup**:
-```bash
-cd backend
-pip install -r requirements.txt
-```
+### 2. Frontend Setup
 
-3. **Database Configuration** (Choose one option):
-
-   **Option A: Use JSON Storage (Default)**
-   ```bash
-   # No additional setup needed - app will use dataProducts.json
-   python app.py
-   ```
-
-   **Option B: Connect to Lakebase Database**
-   
-   **Bash/Linux/Mac:**
-   ```bash
-   # Set up environment variables for database connection
-   export PGHOST="your-lakebase-host"
-   export PGUSER="your-email@databricks.com"
-   export PGDATABASE="databricks_postgres"
-   export PGPORT="5432"
-   export PGSSLMODE="require"
-   export PGPASSWORD="your-databricks-token"
-   
-   # Start the backend
-   python app.py
-   ```
-   
-   **PowerShell/Windows:**
-   ```powershell
-   # Set up environment variables for database connection
-   $env:PGHOST="your-lakebase-host"
-   $env:PGUSER="your-email@databricks.com"
-   $env:PGDATABASE="databricks_postgres"
-   $env:PGPORT="5432"
-   $env:PGSSLMODE="require"
-   $env:PGPASSWORD="your-databricks-token"
-   
-   # Start the backend
-   python app.py
-   ```
-
-4. **Frontend Setup** (in a new terminal):
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev  # For development
+npm run build  # For production
 ```
 
-5. **Access the Application**:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-- Database Status: http://localhost:8000/api/database-status
+### 3. Backend Setup
 
-## 🗄️ Database Configuration
-
-The app automatically detects the environment:
-
-- **Development**: Uses JSON file storage (`dataProducts.json`) by default
-- **Production**: Uses PostgreSQL via Lakebase when environment variables are set
-
-### Getting Lakebase Credentials for Local Development
-
-To connect to Lakebase from your local machine:
-
-1. **Access your Databricks workspace**
-2. **Navigate to Apps** → **Your App** → **Resources**
-3. **Add a Database resource** (Lakebase)
-4. **Copy the connection details** from the resource configuration
-5. **Get a Databricks token**:
-   - Go to User Settings → Developer → Access Tokens
-   - Generate a new token (valid for 1 hour by default)
-   - Use this token as `PGPASSWORD`
-
-### Environment Variables for Local Development
-
-**Bash/Linux/Mac:**
 ```bash
-# Required for Lakebase connection
-export PGHOST="your-lakebase-host.database.azuredatabricks.net"
-export PGUSER="your-email@databricks.com"
-export PGDATABASE="databricks_postgres"
-export PGPORT="5432"
-export PGSSLMODE="require"
-export PGPASSWORD="your-databricks-token"  # Get from Databricks UI
+cd src
+pip install -r requirements.txt
+python -m app  # For development
 ```
 
-**PowerShell/Windows:**
-```powershell
-# Required for Lakebase connection
-$env:PGHOST="your-lakebase-host.database.azuredatabricks.net"
-$env:PGUSER="your-email@databricks.com"
-$env:PGDATABASE="databricks_postgres"
-$env:PGPORT="5432"
-$env:PGSSLMODE="require"
-$env:PGPASSWORD="your-databricks-token"  # Get from Databricks UI
-```
+### 4. Database Setup
 
-### Environment Variables (Production)
-When deployed to Databricks Apps with Lakebase, these are automatically set:
+The application uses Databricks Lakebase (PostgreSQL). Run the database initialization:
+
 ```bash
-PGHOST=your-postgres-host
-PGDATABASE=your-database-name
-PGUSER=your-service-principal
-PGPORT=5432
-PGSSLMODE=require
+python -m seed_data  # Initialize with sample data
 ```
 
-## 🚀 Deployment
+## Deployment on Databricks Apps
 
-### Deploy to Databricks Apps
+### 1. Create Database Resource
 
-**Linux/Mac:**
 ```bash
-./deploy.sh [workspace-path] [app-name] [profile]
+# Create a Lakebase database resource
+databricks apps create-database marketplace-database
 ```
 
-**Windows:**
-```powershell
-.\deploy.ps1 -AppFolderInWorkspace "[workspace-path]" -LakehouseAppName "[app-name]" -DatabricksProfile "[profile]"
+### 2. Configure Environment
+
+Update `src/app.yaml` with your configuration:
+
+```yaml
+resources:
+  - name: DATABASE_RESOURCE_NAME
+    valueFrom: "marketplace-database"
+  - name: LAKEBASE_DATABASE_NAME
+    value: "marketplace_app"
+  - name: MARKETPLACE_ADMIN_USERS
+    value: "admin@yourcompany.com,user2@yourcompany.com"
 ```
 
-**Examples:**
+### 3. Deploy Application
+
 ```bash
-# Deploy to default profile
-./deploy.sh "/Workspace/Users/your-email@company.com/data-marketplace" "data-marketplace"
+# Build frontend
+cd frontend && npm run build
+cp -r dist/* ../src/static/
 
-# Deploy to specific profile (dev, test, prod)
-./deploy.sh "/Workspace/Users/your-email@company.com/data-marketplace" "data-marketplace" "prod"
+# Deploy to Databricks
+cd ..
+databricks apps deploy
 ```
 
-**Profile Configuration:**
-- Set up multiple Databricks profiles using `databricks configure --profile <name>`
-- Use `DEFAULT` or omit the profile parameter to use the default profile
-- Common profiles: `dev`, `test`, `prod`, `staging`
+## Configuration
 
-### Prerequisites for Production
-1. Add Lakebase database resource in Databricks Apps UI
-2. Configure service principal permissions
-3. Deploy using the provided script
+### Admin Users
 
-## 📊 API Endpoints
+Configure admin users in `src/app.yaml`:
 
-- `GET /api/data-products` - Retrieve all products
-- `PUT /api/data-products` - Update products
-- `GET /api/database-status` - Check storage type
-- `GET /health` - Health check
-
-## 🔧 Configuration
-
-### Database Models
-- `data_products`: Main product information
-- `data_product_tags`: Normalized tag storage
-
-### Data Schema
-```json
-{
-  "id": "string",
-  "name": "string", 
-  "description": "string",
-  "type": "string",
-  "domain": "string",
-  "owner": "string",
-  "databricks_url": "string",
-  "tableau_url": "string",
-  "tags": ["string"]
-}
+```yaml
+- name: MARKETPLACE_ADMIN_USERS
+  value: "admin@company.com,manager@company.com"
 ```
 
-## 🔒 Security & Best Practices
+Admin users can:
+- Access the authoring interface
+- Create, edit, and delete data products
+- Manage product metadata and tags
 
-- ✅ Databricks Apps best practices compliance
-- ✅ Environment-based configuration
-- ✅ Input validation and sanitization
-- ✅ Graceful shutdown handling
-- ✅ Proper error handling and logging
-- ✅ CORS configuration for production
+### Branding Customization
 
-## 📝 Development Notes
+#### 1. Logo
+Replace `frontend/src/assets/logo-placeholder.svg` with your company logo.
 
-- The app uses smart fallback: JSON in dev, PostgreSQL in production
-- All database operations are handled through the `database.py` service layer
-- Frontend uses React Context for state management
-- API endpoints maintain backward compatibility
+#### 2. Colors
+Update `frontend/src/theme/colors.js`:
 
-## 🔧 Troubleshooting
+```javascript
+export const colors = {
+  primary: {
+    main: '#your-brand-color',
+    // ... other color variants
+  },
+  // ... rest of color configuration
+};
+```
+
+#### 3. Application Title
+Update the title in `frontend/src/components/Banner.jsx`:
+
+```javascript
+<Typography variant="h6">
+  Your Company Data Marketplace
+</Typography>
+```
+
+### Database Schema
+
+The application creates these tables automatically:
+
+- **data_products**: Main product information
+- **data_product_tags**: Product tagging system
+
+See `resources/database/schema.sql` for the complete schema.
+
+## API Documentation
+
+Once deployed, visit `/docs` for interactive API documentation (Swagger UI).
+
+### Key Endpoints
+
+- `GET /api/data-products` - List all data products
+- `POST /api/data-products` - Create new data product (admin only)
+- `PUT /api/data-products` - Update data products (admin only)
+- `GET /api/user-info` - Get current user information
+- `GET /api/debug-roles` - Debug user roles and permissions
+
+## Development
+
+### Local Development
+
+1. **Frontend Development Server**:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   Access at `http://localhost:5173`
+
+2. **Backend Development Server**:
+   ```bash
+   cd src
+   python -m app
+   ```
+   Access at `http://localhost:8000`
+
+### Environment Variables
+
+For local development, create `.env` files:
+
+**Frontend** (`frontend/.env`):
+```
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+**Backend** (environment variables):
+```
+LAKEBASE_DATABASE_NAME=marketplace_app
+MARKETPLACE_ADMIN_USERS=admin@company.com
+```
+
+### Code Structure
+
+```
+├── frontend/                 # React application
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   ├── context/         # React context providers
+│   │   ├── theme/           # Theming and colors
+│   │   └── utils/           # Utility functions
+│   └── public/              # Static assets
+├── src/                     # FastAPI backend
+│   ├── app.py              # Main application
+│   ├── database.py         # Database operations
+│   ├── models.py           # Data models
+│   ├── app.yaml            # Databricks App configuration
+│   └── static/             # Built frontend files
+└── resources/
+    └── database/           # Database schema and migrations
+```
+
+## Security
+
+### Authentication
+- Uses Databricks native authentication
+- Extracts user information from `gap-auth` header
+- Role-based access control for admin functions
+
+### Authorization
+- Admin access controlled via environment variables
+- Multiple fallback mechanisms for role detection
+- Workspace-level permission checking
+
+## Troubleshooting
 
 ### Common Issues
 
-**"No products found" error:**
-- Check if `dataProducts.json` exists in the `backend/` directory
-- If using database: verify environment variables are set correctly
-- Check database status: `curl http://localhost:8000/api/database-status`
+1. **Database Connection Errors**
+   - Verify database resource name in `app.yaml`
+   - Check Databricks workspace permissions
+   - Ensure Lakebase is enabled in your workspace
 
-**Database connection fails:**
-- Verify your Databricks token is valid (tokens expire after 1 hour)
-- Check that all environment variables are set:
-  - **Bash**: `echo $PGHOST $PGUSER $PGPASSWORD`
-  - **PowerShell**: `echo $env:PGHOST $env:PGUSER $env:PGPASSWORD`
-- Ensure your Databricks workspace has Lakebase configured
+2. **Authentication Issues**
+   - Verify user email in `MARKETPLACE_ADMIN_USERS`
+   - Check `/api/debug-roles` endpoint for role information
+   - Ensure proper Databricks workspace access
 
-**App won't start:**
-- Check if port 8000 is available: `lsof -i :8000`
-- Verify Python dependencies: `pip install -r requirements.txt`
-- Check for syntax errors in the logs
+3. **Build Errors**
+   - Clear node_modules: `rm -rf node_modules && npm install`
+   - Check Node.js version compatibility
+   - Verify all dependencies are installed
 
-### Utility Scripts
+### Debug Endpoints
 
-The `backend/utils/` directory contains helpful utility scripts:
+- `/api/debug-roles` - User role and permission debugging
+- `/api/user-info` - Current user information
+- `/docs` - API documentation and testing
 
-- **`seed_database.py`**: Migrates data from `dataProducts.json` to the Lakebase database
-  ```bash
-  # Using environment variable
-  export PGPASSWORD="your_token_here"
-  python backend/utils/seed_database.py
-  
-  # Using command line argument
-  python backend/utils/seed_database.py "your_token_here"
-  ```
+## Contributing
 
-## 🤝 Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-1. Create a feature branch
-2. Make your changes
-3. Test locally with both JSON and database modes
-4. Submit a pull request
+## License
 
-## 📄 License
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Support
 
-## 🙏 Acknowledgments
+For issues and questions:
+1. Check the troubleshooting section
+2. Review the API documentation at `/docs`
+3. Use the debug endpoints for authentication issues
+4. Create an issue in the repository
 
-- Built with [React](https://reactjs.org/) and [Material-UI](https://mui.com/)
-- Backend powered by [FastAPI](https://fastapi.tiangolo.com/)
-- Database integration with [SQLAlchemy](https://www.sqlalchemy.org/)
-- Deployed on [Databricks Apps](https://docs.databricks.com/apps/index.html) with [Lakebase](https://docs.databricks.com/lakebase/index.html)
+---
 
-## 📞 Support
-
-If you encounter any issues or have questions, please:
-1. Check the [Issues](https://github.com/your-username/data-marketplace/issues) page
-2. Create a new issue with detailed information
-3. Follow the contributing guidelines
-
-## 🔄 Version History
-
-- **v1.0.0** - Initial release with React + FastAPI + Lakebase integration
-- **v1.1.0** - Added cross-platform deployment scripts
-- **v1.2.0** - Enhanced security and best practices compliance
+**Note**: This application is designed specifically for Databricks environments. For deployment on other platforms, additional configuration may be required.

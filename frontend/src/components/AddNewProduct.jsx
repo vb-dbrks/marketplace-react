@@ -151,6 +151,12 @@ export default function AddNewProduct() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('API Error Response:', errorText);
+        
+        // Handle specific error cases
+        if (response.status === 403) {
+          throw new Error('Access denied. Admin permissions required to add products.');
+        }
+        
         throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
       

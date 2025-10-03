@@ -1,7 +1,8 @@
 {
-  "name": "reactapp",
+  "name": "data-marketplace-frontend",
+  "description": "Frontend for Data Marketplace Application",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
