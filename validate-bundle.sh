@@ -28,10 +28,10 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-ENVIRONMENT=${1:-development}
+TARGET=${1:-development}
 ERRORS=0
 
-print_status "Validating Databricks Asset Bundle for environment: $ENVIRONMENT"
+print_status "Validating Databricks Asset Bundle for target: $TARGET"
 
 # Check if Databricks CLI is installed
 if ! command -v databricks &> /dev/null; then
@@ -81,12 +81,12 @@ fi
 
 # Validate bundle syntax
 print_status "Validating bundle syntax..."
-if databricks bundle validate --environment "$ENVIRONMENT" &> /dev/null; then
+if databricks bundle validate --target "$TARGET" &> /dev/null; then
     print_success "Bundle syntax is valid"
 else
     print_error "Bundle syntax validation failed"
     print_status "Running detailed validation..."
-    databricks bundle validate --environment "$ENVIRONMENT"
+    databricks bundle validate --target "$TARGET"
     ERRORS=$((ERRORS + 1))
 fi
 
@@ -107,8 +107,8 @@ if [[ $ERRORS -eq 0 ]]; then
     print_success "✅ Bundle validation passed! Ready for deployment."
     echo
     print_status "Next steps:"
-    echo "  1. Deploy: ./deploy-bundle.sh $ENVIRONMENT"
-    echo "  2. Monitor: databricks bundle run --environment $ENVIRONMENT --logs"
+    echo "  1. Deploy: ./deploy-bundle.sh $TARGET"
+    echo "  2. Monitor: databricks bundle run --target $TARGET --logs"
 else
     print_error "❌ Bundle validation failed with $ERRORS error(s)"
     echo

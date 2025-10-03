@@ -29,13 +29,13 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if environment is specified
-ENVIRONMENT=${1:-development}
-print_status "Deploying to environment: $ENVIRONMENT"
+# Check if target is specified
+TARGET=${1:-development}
+print_status "Deploying to target: $TARGET"
 
-# Validate environment
-if [[ "$ENVIRONMENT" != "development" && "$ENVIRONMENT" != "production" ]]; then
-    print_error "Invalid environment. Use 'development' or 'production'"
+# Validate target
+if [[ "$TARGET" != "development" && "$TARGET" != "staging" && "$TARGET" != "production" ]]; then
+    print_error "Invalid target. Use 'development', 'staging', or 'production'"
     exit 1
 fi
 
@@ -73,20 +73,20 @@ else
 fi
 
 print_status "Validating bundle configuration..."
-if ! databricks bundle validate --environment "$ENVIRONMENT"; then
+if ! databricks bundle validate --target "$TARGET"; then
     print_error "Bundle validation failed"
     exit 1
 fi
 
 print_success "Bundle validation passed"
 
-print_status "Deploying bundle to $ENVIRONMENT environment..."
-if databricks bundle deploy --environment "$ENVIRONMENT"; then
+print_status "Deploying bundle to $TARGET target..."
+if databricks bundle deploy --target "$TARGET"; then
     print_success "Bundle deployed successfully!"
     
     # Get the app URL
     print_status "Getting app URL..."
-    APP_URL=$(databricks bundle run --environment "$ENVIRONMENT" --output json | jq -r '.app_url // empty')
+    APP_URL=$(databricks bundle run --target "$TARGET" --output json | jq -r '.app_url // empty')
     
     if [[ -n "$APP_URL" ]]; then
         print_success "Application deployed at: $APP_URL"
@@ -96,8 +96,8 @@ if databricks bundle deploy --environment "$ENVIRONMENT"; then
     
     print_status "Deployment complete!"
     print_status "You can manage your bundle with:"
-    echo "  databricks bundle run --environment $ENVIRONMENT"
-    echo "  databricks bundle destroy --environment $ENVIRONMENT"
+    echo "  databricks bundle run --target $TARGET"
+    echo "  databricks bundle destroy --target $TARGET"
     
 else
     print_error "Bundle deployment failed"

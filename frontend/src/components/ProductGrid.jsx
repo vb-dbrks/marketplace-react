@@ -1,4 +1,4 @@
-import { Grid, Box, Pagination, Typography, Alert } from '@mui/material';
+import { Grid, Box, Pagination, Typography, Alert, Button } from '@mui/material';
 import ProductCard from './ProductCard';
 import { useData } from '../context/useData';
 import { useState, useEffect } from 'react';
@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 const ITEMS_PER_PAGE = 9; // 3x3 grid
 
 const ProductGrid = () => {
-  const { filteredProducts, searchTerm, loading, error } = useData();
+  const { filteredProducts, searchTerm, loading, error, retryLoading } = useData();
   const [page, setPage] = useState(1);
 
   const handlePageChange = (event, value) => {
@@ -37,7 +37,19 @@ const ProductGrid = () => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">
+        <Alert 
+          severity="error"
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={retryLoading}
+              sx={{ ml: 2 }}
+            >
+              Retry
+            </Button>
+          }
+        >
           Error loading products: {error.message}
         </Alert>
       </Box>

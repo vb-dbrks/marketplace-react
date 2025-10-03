@@ -154,6 +154,7 @@ const ProductDetail = () => {
           </Stack>
 
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Request Access Button - Commented out for future use
             <Button
               variant="contained"
               color="primary"
@@ -175,6 +176,7 @@ const ProductDetail = () => {
             >
               Request Access
             </Button>
+            */}
 
             {/* External Action Buttons */}
             {product.databricks_url && (
@@ -274,61 +276,80 @@ const ProductDetail = () => {
             Overview
           </Typography>
           
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
-              <BoxStyle>
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                  Description
+          <BoxStyle>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
+              Description
+            </Typography>
+            <Typography variant="body1" paragraph sx={{ lineHeight: 1.6 }}>
+              {product.description}
+            </Typography>
+            
+            {product.purpose && (
+              <>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', mt: 2 }}>
+                  Purpose
                 </Typography>
                 <Typography variant="body1" paragraph sx={{ lineHeight: 1.6 }}>
-                  {product.description}
+                  {product.purpose}
                 </Typography>
-                
-                {product.purpose && (
-                  <>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', mt: 2 }}>
-                      Purpose
-                    </Typography>
-                    <Typography variant="body1" paragraph sx={{ lineHeight: 1.6 }}>
-                      {product.purpose}
-                    </Typography>
-                  </>
-                )}
-              </BoxStyle>
+              </>
+            )}
+          </BoxStyle>
+        </Box>
+
+        {/* Product Details Section */}
+        <Box sx={{ mb: 4 }}>
+          <Typography 
+            variant="h5" 
+            gutterBottom 
+            sx={{ 
+              fontWeight: 600, 
+              color: 'text.primary',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              mb: 3
+            }}
+          >
+            <BusinessIcon color="primary" />
+            Product Details
+          </Typography>
+          
+          <BoxStyle>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={4}>
+                <InfoRow icon={<CategoryIcon />} label="Type" value={product.type} />
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <InfoRow icon={<PersonIcon />} label="Owner" value={product.owner} />
+              </Grid>
+              {product.certified && (
+                <Grid item xs={12} sm={6} md={4}>
+                  <InfoRow 
+                    icon={<VerifiedIcon />} 
+                    label="Certified" 
+                    value={product.certified}
+                    color="success.main"
+                  />
+                </Grid>
+              )}
+              {product.classification && (
+                <Grid item xs={12} sm={6} md={4}>
+                  <InfoRow icon={<LabelIcon />} label="Classification" value={product.classification} />
+                </Grid>
+              )}
+              {product.gxp && (
+                <Grid item xs={12} sm={6} md={4}>
+                  <InfoRow 
+                    icon={<ScienceIcon />} 
+                    label="GxP Status" 
+                    value={product.gxp}
+                    color="warning.main"
+                  />
+                </Grid>
+              )}
             </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <BoxStyle>
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                  Product Details
-                </Typography>
-                
-                <Stack spacing={2}>
-                  <InfoRow icon={<CategoryIcon />} label="Type" value={product.type} />
-                  <InfoRow icon={<PersonIcon />} label="Owner" value={product.owner} />
-                  {product.certified && (
-                    <InfoRow 
-                      icon={<VerifiedIcon />} 
-                      label="Certified" 
-                      value={product.certified}
-                      color="success.main"
-                    />
-                  )}
-                  {product.classification && (
-                    <InfoRow icon={<LabelIcon />} label="Classification" value={product.classification} />
-                  )}
-                  {product.gxp && (
-                    <InfoRow 
-                      icon={<ScienceIcon />} 
-                      label="GxP Status" 
-                      value={product.gxp}
-                      color="warning.main"
-                    />
-                  )}
-                </Stack>
-              </BoxStyle>
-            </Grid>
-          </Grid>
+          </BoxStyle>
         </Box>
 
         {/* Additional Details Section - NEW SECTION FOR CONSISTENCY */}

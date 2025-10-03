@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
 import os, json, logging, signal, sys
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import uvicorn
 try:
     from database import db_service
@@ -37,9 +37,7 @@ logging.basicConfig(
 app = FastAPI(
     title="Astellas Data Marketplace API",
     description="API for managing data products in the Astellas Data Marketplace",
-    version="1.0.0",
-    docs_url=None,  # Disable automatic docs
-    redoc_url=None  # Disable automatic redoc
+    version="1.0.0"
 )
 
 # Graceful shutdown handling - required for Databricks Apps
@@ -75,30 +73,66 @@ else:
         allow_headers=["*"],
     )
 
-# Input validation models
+# Pydantic models for API documentation and validation
+class DataProductInput(BaseModel):
+    """Model for input data (ID is optional and will be auto-generated)"""
+    id: Optional[str] = None  # Optional for input, will be auto-generated if not provided
+    name: str
+    description: Optional[str] = ""
+    purpose: Optional[str] = ""
+    type: Optional[str] = ""
+    domain: Optional[str] = ""
+    region: Optional[str] = ""
+    owner: Optional[str] = ""
+    certified: Optional[str] = ""
+    classification: Optional[str] = ""
+    gxp: Optional[str] = ""
+    interval_of_change: Optional[str] = ""
+    last_updated_date: Optional[str] = ""
+    first_publish_date: Optional[str] = ""
+    next_reassessment_date: Optional[str] = ""
+    security_considerations: Optional[str] = ""
+    sub_domain: Optional[str] = ""
+    databricks_url: Optional[str] = ""
+    tableau_url: Optional[str] = ""
+    qlik_url: Optional[str] = ""
+    data_contract_url: Optional[str] = ""
+    tags: List[str] = []
+
 class DataProduct(BaseModel):
+    """Model for output data (ID is always present)"""
     id: str
     name: str
-    description: str
-    purpose: str
-    type: str
-    domain: str
-    region: str
-    owner: str
-    certified: str
-    classification: str
-    gxp: str
-    interval_of_change: str
-    last_updated_date: str
-    first_publish_date: str
-    next_reassessment_date: str
-    security_considerations: str
-    sub_domain: str
-    databricks_url: str
-    tableau_url: str = ""
-    qlik_url: str = ""
-    data_contract_url: str = ""
+    description: Optional[str] = ""
+    purpose: Optional[str] = ""
+    type: Optional[str] = ""
+    domain: Optional[str] = ""
+    region: Optional[str] = ""
+    owner: Optional[str] = ""
+    certified: Optional[str] = ""
+    classification: Optional[str] = ""
+    gxp: Optional[str] = ""
+    interval_of_change: Optional[str] = ""
+    last_updated_date: Optional[str] = ""
+    first_publish_date: Optional[str] = ""
+    next_reassessment_date: Optional[str] = ""
+    security_considerations: Optional[str] = ""
+    sub_domain: Optional[str] = ""
+    databricks_url: Optional[str] = ""
+    tableau_url: Optional[str] = ""
+    qlik_url: Optional[str] = ""
+    data_contract_url: Optional[str] = ""
     tags: List[str] = []
+
+class UpdateResponse(BaseModel):
+    status: str
+    message: str
+
+class HealthResponse(BaseModel):
+    status: str
+
+class ErrorResponse(BaseModel):
+    error: str
 
 # Global exception handler
 @app.exception_handler(Exception)
@@ -112,62 +146,82 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Database service is imported and initialized
 # It automatically detects if Lakebase is available via environment variables
 
-@app.get('/api/data-products')
+@app.get('/api/data-products', 
+         response_model=List[DataProduct],
+         summary="Get all data products",
+         description="Retrieve all data products from the database",
+         responses={
+             200: {"description": "List of data products"},
+             500: {"model": ErrorResponse, "description": "Database error"}
+         })
 def get_data_products():
+    """
+    Retrieve all data products from the database.
+    
+    Returns:
+        List[DataProduct]: Array of data product objects
+    """
     try:
         products = db_service.get_products()
-        logging.info(f"Retrieved {len(products)} products from {'database' if db_service.use_database else 'JSON'}")
+        logging.info(f"Retrieved {len(products)} products from database")
         return products
     except Exception as e:
-        logging.error(f"Error retrieving data products: {e}")
-        raise HTTPException(status_code=500, detail="Error retrieving data products")
+        logging.error(f"Error retrieving data products from database: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-@app.put('/api/data-products')
-async def update_data_products(request: Request):
+@app.put('/api/data-products',
+         response_model=UpdateResponse,
+         summary="Update all data products",
+         description="Replace all data products in the database with the provided list",
+         responses={
+             200: {"model": UpdateResponse, "description": "Products updated successfully"},
+             400: {"model": ErrorResponse, "description": "Invalid input data"},
+             500: {"model": ErrorResponse, "description": "Database error"}
+         })
+async def update_data_products(products: List[DataProductInput]):
+    """
+    Replace all data products in the database with the provided list.
+    
+    Args:
+        products: List of data product objects to store
+        
+    Returns:
+        UpdateResponse: Success status and message
+    """
     try:
-        logging.info(f"PUT /api/data-products called from {request.client.host if request.client else 'unknown'}")
+        logging.info(f"PUT /api/data-products called with {len(products)} products")
         
-        # Get and log raw request for debugging
-        body = await request.body()
-        logging.info(f"Raw request body length: {len(body)} bytes")
-        
-        try:
-            data = json.loads(body.decode('utf-8'))
-        except json.JSONDecodeError as e:
-            logging.error(f"JSON decode error: {e}")
-            raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
-        
-        logging.info(f"Received data: {len(data) if isinstance(data, list) else 'not a list'} products")
+        # Convert Pydantic models to dict for database service
+        data = [product.dict() for product in products]
         
         # Log first product for debugging
-        if isinstance(data, list) and len(data) > 0:
+        if len(data) > 0:
             logging.info(f"First product sample: {json.dumps(data[0], indent=2)}")
         
-        # Validate input structure
-        if not isinstance(data, list):
-            logging.error(f"Invalid data type: expected list, got {type(data)}")
-            raise HTTPException(status_code=400, detail="Expected array of products")
-        
-        # Basic validation of each product - ID is optional (will be auto-generated)
-        for i, product in enumerate(data):
-            if not isinstance(product, dict):
-                logging.error(f"Invalid product at index {i}: not a dict - {type(product)}")
-                raise HTTPException(status_code=400, detail=f"Product at index {i} must be an object")
-            
-            # Check for required fields
-            if 'name' not in product or not product['name']:
-                logging.error(f"Missing required field 'name' in product at index {i}")
-                raise HTTPException(status_code=400, detail=f"Product at index {i} missing required field: name")
+        # Log products without IDs (potential issue)
+        products_without_ids = [p for p in data if not p.get('id') or p.get('id').strip() == '']
+        if products_without_ids:
+            logging.warning(f"Found {len(products_without_ids)} products without IDs - these will get auto-generated IDs")
+            for i, p in enumerate(products_without_ids):
+                logging.warning(f"Product without ID #{i+1}: {p.get('name', 'Unknown')}")
         
         logging.info("Starting database update...")
-        success = db_service.update_products(data)
-        
-        if success:
-            logging.info(f"✅ Successfully updated {len(data)} products in database")
-            return {"status": "success", "message": f"Updated {len(data)} products"}
-        else:
-            logging.error("❌ Database update returned False")
-            raise HTTPException(status_code=500, detail="Failed to update products in database")
+        try:
+            success = db_service.update_products(data)
+            
+            if success:
+                logging.info(f"✅ Successfully updated {len(data)} products in database")
+                # Verify the products were actually saved
+                saved_products = db_service.get_products()
+                logging.info(f"✅ Verification: {len(saved_products)} products now in database")
+                return {"status": "success", "message": f"Updated {len(data)} products"}
+            else:
+                logging.error("❌ Database update returned False - check database logs for details")
+                raise HTTPException(status_code=500, detail="Failed to update products in database - check server logs for details")
+        except Exception as db_error:
+            logging.error(f"❌ Database service threw exception: {db_error}")
+            logging.error(f"Exception type: {type(db_error).__name__}")
+            raise HTTPException(status_code=500, detail=f"Database error: {str(db_error)}")
             
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -179,18 +233,84 @@ async def update_data_products(request: Request):
         logging.error(f"❌ Unexpected error in update_data_products: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+@app.post('/api/data-products',
+          response_model=UpdateResponse,
+          summary="Add a new data product",
+          description="Add a single new data product to the database",
+          responses={
+              200: {"model": UpdateResponse, "description": "Product added successfully"},
+              400: {"model": ErrorResponse, "description": "Invalid input data"},
+              500: {"model": ErrorResponse, "description": "Database error"}
+          })
+async def add_data_product(product: DataProductInput):
+    """
+    Add a single new data product to the database.
+    
+    Args:
+        product: Data product object to add
+        
+    Returns:
+        UpdateResponse: Success status and message
+    """
+    try:
+        logging.info(f"POST /api/data-products called - adding new product: {product.name}")
+        
+        # Get existing products
+        existing_products = db_service.get_products()
+        logging.info(f"Found {len(existing_products)} existing products")
+        
+        # Convert new product to dict
+        new_product_data = product.dict()
+        logging.info(f"New product data: {json.dumps(new_product_data, indent=2)}")
+        
+        # Add new product to existing list
+        all_products = existing_products + [new_product_data]
+        
+        # Update database with all products
+        success = db_service.update_products(all_products)
+        
+        if success:
+            # Verify the products were actually saved
+            saved_products = db_service.get_products()
+            logging.info(f"✅ Successfully added product. Total products now: {len(saved_products)}")
+            return {"status": "success", "message": f"Added product '{product.name}'. Total products: {len(saved_products)}"}
+        else:
+            logging.error("❌ Database update returned False")
+            raise HTTPException(status_code=500, detail="Failed to add product to database")
+            
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except ValidationError as e:
+        logging.error(f"Validation error: {e}")
+        raise HTTPException(status_code=400, detail=f"Validation error: {e}")
+    except Exception as e:
+        logging.error(f"❌ Unexpected error in add_data_product: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 # Health check endpoint
-@app.get('/health')
+@app.get('/health',
+         response_model=HealthResponse,
+         summary="Health check",
+         description="Check if the API service is running")
 def health_check():
+    """
+    Health check endpoint to verify the API service is running.
+    
+    Returns:
+        HealthResponse: Service health status
+    """
     return {"status": "healthy"}
 
-@app.get('/docs')
+@app.get('/api/docs')
 def api_documentation():
-    """Custom API documentation endpoint"""
+    """Custom API documentation endpoint (JSON format)"""
     return {
         "title": "Astellas Data Marketplace API",
         "version": "1.0.0",
         "description": "API for managing data products in the Astellas Data Marketplace",
+        "swagger_ui": "/docs",
+        "redoc_ui": "/redoc",
         "endpoints": {
             "GET /api/data-products": {
                 "description": "Retrieve all data products",
@@ -239,16 +359,6 @@ def api_documentation():
             "tags": "array of strings"
         }
     }
-
-@app.get('/api/test')
-def test_endpoint():
-    logging.info("Test endpoint called")
-    return {"status": "success", "message": "API routing is working"}
-
-@app.put('/api/test')
-def test_put_endpoint():
-    logging.info("Test PUT endpoint called")
-    return {"status": "success", "message": "PUT routing is working"}
 
 # Database status endpoint
 @app.get('/api/database-status')

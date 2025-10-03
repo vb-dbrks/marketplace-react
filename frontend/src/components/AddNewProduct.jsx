@@ -138,18 +138,14 @@ export default function AddNewProduct() {
 
       console.log('Adding new product:', productToAdd);
       
-      // Update local state immediately for better UX
-      const updated = [...allProducts, productToAdd];
-      setProducts(updated);
-      
       // Show loading message
       showSnackbar('Adding product...', 'info');
       
-      // Make API call
+      // Make API call using POST to add single product
       const response = await fetch(`${API_URL}/api/data-products`, {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
+        body: JSON.stringify(productToAdd),
       });
       
       if (!response.ok) {
@@ -164,7 +160,7 @@ export default function AddNewProduct() {
       // Show success and navigate back
       showSnackbar('Product added successfully!', 'success');
       
-      // Reload to ensure data consistency
+      // Reload to ensure data consistency and get the auto-generated ID
       await reloadProducts();
       
       // Navigate back to authoring screen after a short delay
@@ -176,7 +172,7 @@ export default function AddNewProduct() {
       console.error('Error adding product:', error);
       showSnackbar('Failed to add product: ' + error.message, 'error');
       
-      // Revert local state on error
+      // Reload on error to ensure consistent state
       await reloadProducts();
     } finally {
       setLoading(false);

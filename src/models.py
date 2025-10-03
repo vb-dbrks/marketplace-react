@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine, Column, String, Text, DateTime, Integer, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
 import os
 import sys
@@ -39,8 +39,7 @@ class DataProduct(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # Relationship to tags
-    tags = relationship("DataProductTag", back_populates="product", cascade="all, delete-orphan")
+    # Note: Tags are loaded separately via raw SQL to avoid relationship issues
 
 class DataProductTag(Base):
     __tablename__ = "data_product_tags"
@@ -50,8 +49,7 @@ class DataProductTag(Base):
     product_id = Column(String(50), ForeignKey('public.data_products.id'), nullable=False)
     tag = Column(String(100), nullable=False)
     
-    # Relationship back to product
-    product = relationship("DataProduct", back_populates="tags")
+    # Note: Relationship removed to avoid SQLAlchemy issues - using raw SQL instead
 
 # Database connection setup
 def get_engine():

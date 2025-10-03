@@ -3,8 +3,23 @@
 
 param(
     [Parameter(Position=0)]
-    [ValidateSet("development", "production")]
-    [string]$Environment = "development"
+    [ValidateSet("development", "staging", "production")]
+    [string]$Target = "development",
+    
+    [Parameter()]
+    [string]$DatabricksProfile = $null,
+    
+    [Parameter()]
+    [switch]$Force,
+    
+    [Parameter()]
+    [switch]$Clean,
+    
+    [Parameter()]
+    [switch]$Sync,
+    
+    [Parameter()]
+    [switch]$SyncOnly
 )
 
 # Function to write colored output
@@ -28,7 +43,48 @@ function Write-Error {
     Write-Host "[ERROR] $Message" -ForegroundColor Red
 }
 
-Write-Status "Deploying to environment: $Environment"
+# Handle sync-only mode
+if ($SyncOnly) {
+    Write-Status "Sync-only mode: Syncing source files to workspace without deployment"
+    
+    # Build frontend first
+    Write-Status "Building frontend..."
+    if (Test-Path "frontend") {
+        Write-Status "Found frontend directory, building locally..."
+        Set-Location frontend
+        npm install
+        npm run build
+        Set-Location ..
+        
+        Write-Status "Copying frontend build to src/static..."
+        if (Test-Path "src/static") {
+            Remove-Item -Recurse -Force "src/static"
+        }
+        Copy-Item -Recurse "frontend/dist" "src/static"
+    }
+    
+    # Sync files
+    $workspacePath = "/Workspace/foundationx/apps/astellas-data-marketplace"
+    $syncArgs = @("sync", "./src", $workspacePath, "--full")
+    if ($DatabricksProfile) {
+        $syncArgs += @("--profile", $DatabricksProfile)
+    }
+    
+    Write-Status "Running: databricks $($syncArgs -join ' ')"
+    $syncResult = & databricks $syncArgs
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "Source files synced successfully to $workspacePath"
+        Write-Status "Sync complete! Your app should now reflect the latest changes."
+    } else {
+        Write-Error "Sync failed"
+        exit 1
+    }
+    
+    exit 0
+}
+
+Write-Status "Deploying to target: $Target"
 
 # Check if Databricks CLI is installed
 try {
@@ -70,7 +126,12 @@ if (Test-Path "frontend") {
 }
 
 Write-Status "Validating bundle configuration..."
-$validation = databricks bundle validate --environment $Environment
+if ($DatabricksProfile) {
+    Write-Status "Using Databricks profile: $DatabricksProfile"
+    $validation = databricks bundle validate --target $Target --profile $DatabricksProfile
+} else {
+    $validation = databricks bundle validate --target $Target
+}
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Bundle validation failed"
     exit 1
@@ -78,14 +139,70 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Success "Bundle validation passed"
 
-Write-Status "Deploying bundle to $Environment environment..."
-$deployment = databricks bundle deploy --environment $Environment
+# Clean deployment option - destroy existing resources first
+if ($Clean) {
+    Write-Status "Clean deployment requested - destroying existing resources first..."
+    $destroyArgs = @("bundle", "destroy", "--target", $Target, "--auto-approve")
+    if ($DatabricksProfile) {
+        $destroyArgs += @("--profile", $DatabricksProfile)
+    }
+    
+    Write-Status "Running: databricks $($destroyArgs -join ' ')"
+    $destroy = & databricks $destroyArgs
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "Existing resources destroyed successfully"
+    } else {
+        Write-Warning "Destroy command failed or no existing resources found - continuing with deployment"
+    }
+}
+
+Write-Status "Deploying bundle to $Target target..."
+if ($Force) {
+    Write-Status "Using --force flag for Git branch validation and --auto-approve for non-interactive deployment"
+}
+
+$deployArgs = @("bundle", "deploy", "--target", $Target, "--auto-approve")
+if ($DatabricksProfile) {
+    $deployArgs += @("--profile", $DatabricksProfile)
+}
+if ($Force) {
+    $deployArgs += "--force"  # This is for Git branch validation
+}
+
+Write-Status "Running: databricks $($deployArgs -join ' ')"
+$deployment = & databricks $deployArgs
 if ($LASTEXITCODE -eq 0) {
     Write-Success "Bundle deployed successfully!"
     
+    # Sync source files to workspace if requested
+    if ($Sync) {
+        Write-Status "Syncing source files to workspace..."
+        
+        # Get the workspace path from bundle configuration
+        $workspacePath = "/Workspace/foundationx/apps/astellas-data-marketplace"  # Default path
+        
+        $syncArgs = @("sync", "./src", $workspacePath, "--full")
+        if ($DatabricksProfile) {
+            $syncArgs += @("--profile", $DatabricksProfile)
+        }
+        
+        Write-Status "Running: databricks $($syncArgs -join ' ')"
+        $syncResult = & databricks $syncArgs
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Source files synced successfully to $workspacePath"
+        } else {
+            Write-Warning "Sync failed, but deployment was successful"
+        }
+    }
+    
     Write-Status "Getting app URL..."
     try {
-        $appInfo = databricks bundle run --environment $Environment --output json | ConvertFrom-Json
+        if ($DatabricksProfile) {
+            $appInfo = databricks bundle run --target $Target --profile $DatabricksProfile --output json | ConvertFrom-Json
+        } else {
+            $appInfo = databricks bundle run --target $Target --output json | ConvertFrom-Json
+        }
         if ($appInfo.app_url) {
             Write-Success "Application deployed at: $($appInfo.app_url)"
         } else {
@@ -97,8 +214,8 @@ if ($LASTEXITCODE -eq 0) {
     
     Write-Status "Deployment complete!"
     Write-Status "You can manage your bundle with:"
-    Write-Host "  databricks bundle run --environment $Environment"
-    Write-Host "  databricks bundle destroy --environment $Environment"
+    Write-Host "  databricks bundle run --target $Target"
+    Write-Host "  databricks bundle destroy --target $Target"
     
 } else {
     Write-Error "Bundle deployment failed"

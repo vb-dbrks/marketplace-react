@@ -38,21 +38,39 @@ function DataProvider({ children }) {
     fetch(`${API_URL}/api/data-products`)
       .then(res => {
         console.log('DataContext: API response status:', res.status);
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status} ${res.statusText}`);
+        }
         return res.json();
       })
       .then(data => {
-        console.log('DataContext: Received products:', data.length);
-        setProducts(data);
+        console.log('DataContext: Received products:', data);
+        // Ensure data is an array before setting products
+        if (Array.isArray(data)) {
+          console.log('DataContext: Setting products array with length:', data.length);
+          setProducts(data);
+        } else {
+          console.error('DataContext: Received data is not an array:', typeof data, data);
+          setProducts([]); // Set empty array as fallback
+          setError(new Error('Invalid data format received from API'));
+        }
       })
       .catch(err => {
         console.error('DataContext: API error:', err);
         setError(err);
+        setProducts([]); // Set empty array on error to prevent filter issues
       })
       .finally(() => setLoading(false));
   }, []);
 
   // Filter products based on active filters and search term
   const filteredProducts = useMemo(() => {
+    // Ensure products is an array before filtering
+    if (!Array.isArray(products)) {
+      console.warn('DataContext: products is not an array, returning empty array');
+      return [];
+    }
+    
     return products.filter(product => {
       const matchesFilters = Object.entries(filters).every(([field, value]) => {
         if (!value) return true; // Skip empty filters
@@ -113,9 +131,26 @@ function DataProvider({ children }) {
     setLoading(true);
     setError(null);
     fetch(`${API_URL}/api/data-products`)
-      .then(res => res.json())
-      .then(setProducts)
-      .catch(setError)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status} ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        // Ensure data is an array before setting products
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          console.error('DataContext: Received data is not an array:', typeof data, data);
+          setProducts([]); // Set empty array as fallback
+          setError(new Error('Invalid data format received from API'));
+        }
+      })
+      .catch(err => {
+        setError(err);
+        setProducts([]); // Set empty array on error to prevent filter issues
+      })
       .finally(() => setLoading(false));
   };
 
@@ -144,7 +179,11 @@ function DataProvider({ children }) {
     loading,
     error,
     setProducts, // for authoring page to update
-    reloadProducts // expose reload function
+    reloadProducts, // expose reload function
+    retryLoading: () => {
+      setError(null);
+      reloadProducts();
+    }
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
